@@ -18,23 +18,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: npm
+          # Intentionally omit registry-url. It writes
+          # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+          # which masks Trusted Publisher OIDC and causes E404.
+
+      - name: Upgrade npm for Trusted Publisher OIDC
+        run: |
+          npm install -g npm@latest
+          npm --version
+          printf 'registry=https://registry.npmjs.org/\n' > "$HOME/.npmrc"
+          # Ensure no token auth is configured for the registry.
+          if grep -q '_authToken' "$HOME/.npmrc" 2>/dev/null; then
+            echo "unexpected auth token in ~/.npmrc" >&2
+            exit 1
+          fi
 
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
-      - name: Show npm / OIDC context
-        run: |
-          npm --version
-          node --version
-          echo "repo=${{ github.repository }}"
-          echo "workflow=${{ github.workflow }}"
-          echo "workflow_ref=${{ github.workflow_ref }}"
-          echo "ref=${{ github.ref }}"
-
-      # Publishes via npm Trusted Publisher OIDC — do not set NODE_AUTH_TOKEN.
       - name: Publish to npm
         run: npm publish --access public --provenance
+        env:
+          # Prevent any inherited token from taking precedence over OIDC.
+          NODE_AUTH_TOKEN: ""
