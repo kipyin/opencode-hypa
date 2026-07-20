@@ -18,16 +18,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          registry-url: https://registry.npmjs.org
           cache: npm
-          # Do not set registry-url / NODE_AUTH_TOKEN — that breaks Trusted Publisher OIDC.
 
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
-      # Publishes via npm Trusted Publisher OIDC — no NPM_TOKEN secret required.
+      - name: Show npm / OIDC context
+        run: |
+          npm --version
+          node --version
+          echo "repo=${{ github.repository }}"
+          echo "workflow=${{ github.workflow }}"
+          echo "workflow_ref=${{ github.workflow_ref }}"
+          echo "ref=${{ github.ref }}"
+
+      # Publishes via npm Trusted Publisher OIDC — do not set NODE_AUTH_TOKEN.
       - name: Publish to npm
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ""
