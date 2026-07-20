@@ -1,12 +1,9 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin"
 import { isBashTool, loadConfig } from "./policy.js"
 import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
 
 export type { HypaConfig, RewriteStatus } from "./types.js"
-export { loadConfig, isHypaCommand, isBashTool, formatStatus } from "./policy.js"
-export { resolveHypaBinary } from "./resolve.js"
-export { rewriteCommand } from "./rewrite.js"
 
 /**
  * OpenCode plugin that rewrites bash/shell tool calls through Hypa before execution.
@@ -16,8 +13,11 @@ export { rewriteCommand } from "./rewrite.js"
  *
  * Or add to opencode.json:
  *   { "plugin": ["opencode-hypa"] }
+ *
+ * Important: do not re-export helper functions from this entry. OpenCode's legacy
+ * plugin loader treats every exported function as a plugin entrypoint.
  */
-const OpencodeHypaPlugin: Plugin = async () => {
+const server: Plugin = async () => {
   const config = loadConfig()
 
   if (!config.enabled) {
@@ -63,5 +63,9 @@ const OpencodeHypaPlugin: Plugin = async () => {
   }
 }
 
-export default OpencodeHypaPlugin
-export { OpencodeHypaPlugin }
+const plugin: PluginModule = {
+  id: "opencode-hypa",
+  server,
+}
+
+export default plugin
