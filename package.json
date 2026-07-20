@@ -1,0 +1,60 @@
+{
+  "name": "opencode-hypa",
+  "version": "0.1.0",
+  "description": "OpenCode plugin that rewrites bash tool calls through Hypa for local, deterministic output compression.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "hypa",
+    "context",
+    "token",
+    "compression",
+    "bash"
+  ],
+  "author": "kipyin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kipyin/opencode-hypa.git"
+  },
+  "homepage": "https://github.com/kipyin/opencode-hypa#readme",
+  "bugs": {
+    "url": "https://github.com/kipyin/opencode-hypa/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.0.0"
+  },
+  "dependencies": {
+    "@hypabolic/hypa": "^0.1.11"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.15.7",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}
