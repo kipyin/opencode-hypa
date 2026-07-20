@@ -53,6 +53,16 @@ Or add to `~/.config/opencode/opencode.json` / `opencode.json`:
 
 Commands that already start with `hypa` are never double-wrapped.
 
+### Agent visibility
+
+When Hypa rewrites a command, OpenCode would otherwise hand the LLM a tool result whose `title` shows the rewritten command (`hypa git log …`) with no marker that a plugin changed it. The LLM can misread the prefix as its own typo. To prevent that, this plugin also registers `tool.execute.after` and annotates the tool result with a one-line note:
+
+```text
+[hypa Rewritten] git log --oneline -10 => hypa git log --oneline -10
+```
+
+The note is prepended to both `output.title` and `output.output`, and the full record is written to `output.metadata.hypaRewrite`. Non-rewritten outcomes (passthrough / skipped / error) leave the tool result untouched.
+
 ## Configuration
 
 | Variable | Default | Description |

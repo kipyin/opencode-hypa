@@ -41,5 +41,6 @@ describe("plugin entry exports", () => {
 
     const hooks = await plugins[0]!({} as any, undefined)
     assert.equal(typeof (hooks as { "tool.execute.before"?: unknown })["tool.execute.before"], "function")
+    assert.equal(typeof (hooks as { "tool.execute.after"?: unknown })["tool.execute.after"], "function")
   })
 })

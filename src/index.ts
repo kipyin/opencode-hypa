@@ -2,6 +2,7 @@ import type { Plugin, PluginModule } from "@opencode-ai/plugin"
 import { isBashTool, loadConfig } from "./policy.js"
 import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
+import { annotateRewrite, type RewriteRecord } from "./annotate.js"
 
 export type { HypaConfig, RewriteStatus } from "./types.js"
 
@@ -17,6 +18,7 @@ export type { HypaConfig, RewriteStatus } from "./types.js"
  * Important: do not re-export helper functions from this entry. OpenCode's legacy
  * plugin loader treats every exported function as a plugin entrypoint.
  */
+
 const server: Plugin = async () => {
   const config = loadConfig()
 
@@ -26,6 +28,12 @@ const server: Plugin = async () => {
 
   // Resolve once at startup for clearer failures later.
   const resolvedBinary = resolveHypaBinary(config.binary)
+
+  // Stash rewrites keyed by callID so tool.execute.after can annotate the
+  // tool result the LLM sees. Without this, OpenCode hands the LLM the
+  // rewritten command in the tool result with no marker that a plugin
+  // changed it, and the LLM rationalizes the prefix as its own typo.
+  const rewrites = new Map<string, RewriteRecord>()
 
   return {
     "tool.execute.before": async (input, output) => {
@@ -42,6 +50,11 @@ const server: Plugin = async () => {
       switch (status.kind) {
         case "rewritten":
           output.args.command = status.command
+          rewrites.set(input.callID, {
+            input: status.input,
+            command: status.command,
+            outcome: status.outcome,
+          })
           return
         case "passthrough":
         case "skipped":
@@ -53,12 +66,25 @@ const server: Plugin = async () => {
         case "ask":
           if (config.askNonInteractive === "allow") {
             output.args.command = status.command
+            rewrites.set(input.callID, {
+              input: status.input,
+              command: status.command,
+              outcome: "GenericWrapper",
+            })
             return
           }
           throw new Error(
             `${status.reason} Non-interactive fallback is deny (set OPENCODE_HYPA_ASK_NON_INTERACTIVE=allow to allow).`,
           )
       }
+    },
+
+    "tool.execute.after": async (input, output) => {
+      if (!isBashTool(input.tool)) return
+      const record = rewrites.get(input.callID)
+      if (!record) return
+      rewrites.delete(input.callID)
+      annotateRewrite(output, record)
     },
   }
 }

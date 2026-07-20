@@ -1,6 +1,6 @@
 {
   "name": "opencode-hypa",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenCode plugin that rewrites bash tool calls through Hypa for local, deterministic output compression.",
   "license": "MIT",
   "type": "module",
