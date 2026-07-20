@@ -74,6 +74,22 @@ npm test
 npm run build
 ```
 
+## Publishing
+
+Releases publish to npm via [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) (GitHub OIDC). No long-lived npm token is stored in the repo.
+
+1. On npm: [opencode-hypa → Settings → Trusted Publisher](https://www.npmjs.com/package/opencode-hypa/access)
+2. Add GitHub with:
+
+| Field | Value |
+|---|---|
+| Organization or user | `kipyin` |
+| Repository | `opencode-hypa` |
+| Workflow filename | `publish.yml` |
+| Environment | *(leave empty)* |
+
+3. Publish a GitHub Release (`vX.Y.Z`), or run the **publish** workflow manually.
+
 ## Related
 
 - [Hypa](https://github.com/Hypabolic/Hypa) — local context runtime
