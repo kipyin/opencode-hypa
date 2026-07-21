@@ -65,12 +65,40 @@ The note is prepended to both `output.title` and `output.output`, and the full r
 
 ## Configuration
 
-| Variable | Default | Description |
-|---|---|---|
-| `OPENCODE_HYPA_ENABLED` | `true` | Set `0`/`false` to disable the plugin |
-| `HYPA_BIN` | `hypa` (PATH / bundled) | Hypa executable or absolute path |
-| `OPENCODE_HYPA_REWRITE_TIMEOUT_MS` | `5000` | Timeout for `hypa rewrite --json` |
-| `OPENCODE_HYPA_ASK_NON_INTERACTIVE` | `deny` | `allow` or `deny` when Hypa returns `Ask` |
+Set options in `opencode.json` as the second element of the plugin tuple, or override any field with an environment variable (env wins over options).
+
+```json
+{
+  "plugin": [
+    "opencode-hypa",
+    {
+      "binary": "hypa",
+      "rewriteTimeoutMs": 5000,
+      "askNonInteractive": "deny",
+      "enabled": true
+    }
+  ]
+}
+```
+
+| Option (`PluginOptions`) | Env var | Default | Description |
+|---|---|---|---|
+| `binary` | `OPENCODE_HYPA_BIN` | `hypa` (PATH / bundled) | Hypa executable or absolute path |
+| `rewriteTimeoutMs` | `OPENCODE_HYPA_REWRITE_TIMEOUT_MS` | `5000` | Timeout for `hypa rewrite --json` |
+| `askNonInteractive` | `OPENCODE_HYPA_ASK_NON_INTERACTIVE` | `deny` | `allow` or `deny` when Hypa returns `Ask` |
+| `enabled` | `OPENCODE_HYPA_ENABLED` | `true` | Set `false` / `0` to disable the plugin |
+
+## Diagnostics
+
+In the OpenCode TUI, run `/hypa` to open a modal with:
+
+- whether the plugin is enabled
+- resolved Hypa binary path and whether it exists
+- installed Hypa version (`hypa --version`, cached at TUI load)
+- effective config for each field with source tag (`env`, `options`, or `default`)
+- the last rewrite (input, command, outcome, timestamp) or `none`
+
+Re-open `/hypa` to refresh the snapshot after config or rewrite changes.
 
 ## Why not MCP?
 

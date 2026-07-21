@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate build and tests without publishing to npm
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -39,7 +44,12 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      - name: Dry run (skip npm publish)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        run: echo "Dry run complete — build and tests passed; npm publish skipped."
+
       - name: Publish to npm
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
         run: npm publish --access public --provenance
         env:
           # Prevent any inherited token from taking precedence over OIDC.
