@@ -3,8 +3,9 @@ import { isBashTool, loadConfig } from "./policy.js"
 import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
 import { annotateRewrite, type RewriteRecord } from "./annotate.js"
+import type { PluginOptions } from "./types.js"
 
-export type { HypaConfig, RewriteStatus } from "./types.js"
+export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } from "./types.js"
 
 /**
  * OpenCode plugin that rewrites bash/shell tool calls through Hypa before execution.
@@ -19,8 +20,8 @@ export type { HypaConfig, RewriteStatus } from "./types.js"
  * plugin loader treats every exported function as a plugin entrypoint.
  */
 
-const server: Plugin = async () => {
-  const config = loadConfig()
+const server = (async (_input, options?: PluginOptions) => {
+  const config = loadConfig(process.env, options)
 
   if (!config.enabled) {
     return {}
@@ -87,7 +88,7 @@ const server: Plugin = async () => {
       annotateRewrite(output, record)
     },
   }
-}
+}) satisfies Plugin
 
 const plugin: PluginModule = {
   id: "opencode-hypa",

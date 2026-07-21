@@ -8,6 +8,30 @@ export type RewriteResultV1 = {
 
 export type AskNonInteractivePolicy = "allow" | "deny"
 
+export type ConfigSource = "env" | "options" | "default"
+
+export type PluginOptions = {
+  /** Hypa executable name or absolute path. */
+  binary?: string
+  /** Timeout for `hypa rewrite --json` in milliseconds. */
+  rewriteTimeoutMs?: number
+  /** Behavior when Hypa returns Ask and no interactive UI is available. */
+  askNonInteractive?: AskNonInteractivePolicy
+  /** When false, the plugin is a no-op. */
+  enabled?: boolean
+}
+
+export type HypaConfigSources = {
+  binary: ConfigSource
+  rewriteTimeoutMs: ConfigSource
+  askNonInteractive: ConfigSource
+  enabled: ConfigSource
+}
+
+export type HypaConfigWithSources = HypaConfig & {
+  sources: HypaConfigSources
+}
+
 export type HypaConfig = {
   /** Hypa executable name or absolute path. */
   binary: string

@@ -39,8 +39,13 @@ describe("plugin entry exports", () => {
 
     assert.equal(plugins.length, 1)
 
-    const hooks = await plugins[0]!({} as any, undefined)
+    const hooks = await plugins[0]!({} as any, { binary: "/opt/hypa" })
     assert.equal(typeof (hooks as { "tool.execute.before"?: unknown })["tool.execute.before"], "function")
     assert.equal(typeof (hooks as { "tool.execute.after"?: unknown })["tool.execute.after"], "function")
+  })
+
+  it("accepts plugin options on the server entry", async () => {
+    const hooks = await plugin.server!({} as any, { enabled: false })
+    assert.deepEqual(hooks, {})
   })
 })
