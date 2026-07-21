@@ -3,6 +3,12 @@ import { isBashTool, loadConfig } from "./policy.js"
 import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
 import { annotateRewrite, type RewriteRecord } from "./annotate.js"
+import {
+  clearHypaLastRewrite,
+  setHypaEffectiveConfigWithSources,
+  setHypaLastRewrite,
+  setHypaResolvedBinary,
+} from "./state.js"
 import type { PluginOptions } from "./types.js"
 
 export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } from "./types.js"
@@ -22,13 +28,14 @@ export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } 
 
 const server = (async (_input, options?: PluginOptions) => {
   const config = loadConfig(process.env, options)
+  setHypaEffectiveConfigWithSources(config)
+
+  const resolvedBinary = resolveHypaBinary(config.binary)
+  setHypaResolvedBinary(resolvedBinary)
 
   if (!config.enabled) {
     return {}
   }
-
-  // Resolve once at startup for clearer failures later.
-  const resolvedBinary = resolveHypaBinary(config.binary)
 
   // Stash rewrites keyed by callID so tool.execute.after can annotate the
   // tool result the LLM sees. Without this, OpenCode hands the LLM the
@@ -62,6 +69,11 @@ const server = (async (_input, options?: PluginOptions) => {
             command: status.command,
             outcome: status.outcome,
           })
+          setHypaLastRewrite({
+            input: status.input,
+            command: status.command,
+            outcome: status.outcome,
+          })
           return
         case "passthrough":
         case "skipped":
@@ -74,6 +86,11 @@ const server = (async (_input, options?: PluginOptions) => {
           if (config.askNonInteractive === "allow") {
             output.args.command = status.command
             rewrites.set(input.callID, {
+              input: status.input,
+              command: status.command,
+              outcome: "GenericWrapper",
+            })
+            setHypaLastRewrite({
               input: status.input,
               command: status.command,
               outcome: "GenericWrapper",
@@ -91,6 +108,7 @@ const server = (async (_input, options?: PluginOptions) => {
       const record = rewrites.get(input.callID)
       if (!record) return
       rewrites.delete(input.callID)
+      clearHypaLastRewrite()
       annotateRewrite(output, record)
     },
   }
