@@ -28,9 +28,11 @@ function spawnHypaVersion(binary: string): Promise<string> {
 
 async function cacheHypaVersion(resolvedBinary: string | undefined): Promise<void> {
   if (hypaVersionCached) return
+  if (!resolvedBinary) return
+
   hypaVersionCached = true
 
-  if (!resolvedBinary || !existsSync(resolvedBinary)) {
+  if (!existsSync(resolvedBinary)) {
     setHypaVersion("")
     return
   }
@@ -48,7 +50,8 @@ function snapshotDiagnosticsInput(): HypaDiagnosticsInput {
   return { ...state, binaryExists }
 }
 
-function showHypaDialog(api: TuiPluginApi): void {
+async function showHypaDialog(api: TuiPluginApi): Promise<void> {
+  await cacheHypaVersion(getHypaState().resolvedBinary)
   const snapshot = snapshotDiagnosticsInput()
   const text = formatHypaDiagnostics(snapshot)
   const { Dialog } = api.ui
@@ -76,8 +79,8 @@ export const tui: TuiPlugin = async (api) => {
         category: "Hypa",
         namespace: "palette",
         slashName: "hypa",
-        run() {
-          showHypaDialog(api)
+        async run() {
+          await showHypaDialog(api)
         },
       },
     ],

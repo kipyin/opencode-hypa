@@ -34,24 +34,6 @@ export function isHypaCommand(command: string): boolean {
   return trimmed === "hypa" || trimmed.startsWith("hypa ")
 }
 
-export function parseAskNonInteractive(value: string | undefined): AskNonInteractivePolicy {
-  return value?.trim().toLowerCase() === "allow" ? "allow" : "deny"
-}
-
-export function parsePositiveInteger(value: string | undefined, fallback: number): number {
-  if (!value) return fallback
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
-}
-
-export function parseBooleanFlag(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback
-  const normalized = value.trim().toLowerCase()
-  if (["0", "false", "no", "off"].includes(normalized)) return false
-  if (["1", "true", "yes", "on"].includes(normalized)) return true
-  return fallback
-}
-
 function warnInvalid(field: string, value: unknown, fallback: unknown): void {
   console.warn(
     `[opencode-hypa] Invalid ${field} value ${JSON.stringify(value)}; falling back to ${JSON.stringify(fallback)}`,
