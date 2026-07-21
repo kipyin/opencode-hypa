@@ -1,4 +1,5 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin"
+import type { TuiPlugin } from "@opencode-ai/plugin/tui"
 import { isBashTool, loadConfig } from "./policy.js"
 import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
@@ -9,6 +10,7 @@ import {
   setHypaLastRewrite,
   setHypaResolvedBinary,
 } from "./state.js"
+import { tui } from "./tui.js"
 import type { PluginOptions } from "./types.js"
 
 export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } from "./types.js"
@@ -114,9 +116,10 @@ const server = (async (_input, options?: PluginOptions) => {
   }
 }) satisfies Plugin
 
-const plugin: PluginModule = {
+const plugin = {
   id: "opencode-hypa",
   server,
-}
+  tui,
+} as PluginModule & { tui: TuiPlugin }
 
 export default plugin

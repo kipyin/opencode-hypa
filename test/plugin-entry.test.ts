@@ -14,6 +14,7 @@ describe("plugin entry exports", () => {
     assert.equal(typeof plugin, "object")
     assert.equal(plugin.id, "opencode-hypa")
     assert.equal(typeof plugin.server, "function")
+    assert.equal(typeof plugin.tui, "function")
   })
 
   it("does not expose helper functions that OpenCode would treat as plugins", async () => {
