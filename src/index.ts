@@ -43,9 +43,15 @@ const server = (async (_input, options?: PluginOptions) => {
       const command = String(output.args?.command ?? "")
       if (!command.trim()) return
 
+      const signal =
+        "signal" in input && input.signal instanceof AbortSignal
+          ? input.signal
+          : undefined
+
       const status = await rewriteCommand(
         { ...config, binary: resolvedBinary },
         command,
+        signal,
       )
 
       switch (status.kind) {

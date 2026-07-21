@@ -3,11 +3,23 @@ import type { HypaConfig, RewriteStatus } from "./types.js"
 import { isHypaCommand, mapRewriteResult, parseRewriteJson } from "./policy.js"
 import { getExecArgs, resolveHypaBinary } from "./resolve.js"
 
+function abortErrorMessage(signal?: AbortSignal): string {
+  const reason = signal?.reason
+  if (reason instanceof Error) return reason.message
+  if (reason !== undefined) return String(reason)
+  return "rewrite aborted"
+}
+
 async function runRewrite(
   binary: string,
   command: string,
   timeoutMs: number,
-): Promise<{ stdout: string; stderr: string; code: number | null; timedOut: boolean }> {
+  signal?: AbortSignal,
+): Promise<{ stdout: string; stderr: string; code: number | null; timedOut: boolean; aborted: boolean }> {
+  if (signal?.aborted) {
+    return { stdout: "", stderr: "", code: null, timedOut: false, aborted: true }
+  }
+
   const [execBin, execArgs] = getExecArgs(binary, ["rewrite", "--json", command])
 
   return await new Promise((resolve, reject) => {
@@ -19,6 +31,22 @@ async function runRewrite(
     let stderr = ""
     let settled = false
     let timedOut = false
+    let aborted = false
+
+    const onAbort = () => {
+      aborted = true
+      child.kill("SIGTERM")
+    }
+
+    signal?.addEventListener("abort", onAbort, { once: true })
+
+    const settle = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      signal?.removeEventListener("abort", onAbort)
+      fn()
+    }
 
     const timer = setTimeout(() => {
       timedOut = true
@@ -35,17 +63,19 @@ async function runRewrite(
     })
 
     child.on("error", (error) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      reject(error)
+      settle(() => reject(error))
     })
 
     child.on("close", (code) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      resolve({ stdout, stderr, code, timedOut })
+      settle(() => {
+        resolve({
+          stdout,
+          stderr,
+          code,
+          timedOut,
+          aborted: aborted || signal?.aborted === true,
+        })
+      })
     })
   })
 }
@@ -53,15 +83,24 @@ async function runRewrite(
 export async function rewriteCommand(
   config: HypaConfig,
   command: string,
+  signal?: AbortSignal,
 ): Promise<RewriteStatus> {
   if (isHypaCommand(command)) {
     return { kind: "skipped", input: command, reason: "command already starts with hypa" }
   }
 
+  if (signal?.aborted) {
+    return { kind: "error", input: command, error: abortErrorMessage(signal) }
+  }
+
   const binary = resolveHypaBinary(config.binary)
 
   try {
-    const result = await runRewrite(binary, command, config.rewriteTimeoutMs)
+    const result = await runRewrite(binary, command, config.rewriteTimeoutMs, signal)
+
+    if (result.aborted) {
+      return { kind: "error", input: command, error: abortErrorMessage(signal) }
+    }
 
     if (result.timedOut) {
       return {
