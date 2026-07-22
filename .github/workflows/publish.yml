@@ -41,8 +41,8 @@ jobs:
 
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
       - run: npm run build
+      - run: npm test
 
       - name: Dry run (skip npm publish)
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run
