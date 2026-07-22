@@ -1,10 +1,19 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin"
+import type { TuiPlugin } from "@opencode-ai/plugin/tui"
 import { isBashTool, loadConfig } from "./policy.js"
 import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
 import { annotateRewrite, type RewriteRecord } from "./annotate.js"
+import {
+  clearHypaLastRewrite,
+  setHypaEffectiveConfigWithSources,
+  setHypaLastRewrite,
+  setHypaResolvedBinary,
+} from "./state.js"
+import { tui } from "./tui.js"
+import type { PluginOptions } from "./types.js"
 
-export type { HypaConfig, RewriteStatus } from "./types.js"
+export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } from "./types.js"
 
 /**
  * OpenCode plugin that rewrites bash/shell tool calls through Hypa before execution.
@@ -19,15 +28,16 @@ export type { HypaConfig, RewriteStatus } from "./types.js"
  * plugin loader treats every exported function as a plugin entrypoint.
  */
 
-const server: Plugin = async () => {
-  const config = loadConfig()
+const server = (async (_input, options?: PluginOptions) => {
+  const config = loadConfig(process.env, options)
+  setHypaEffectiveConfigWithSources(config)
+
+  const resolvedBinary = resolveHypaBinary(config.binary)
+  setHypaResolvedBinary(resolvedBinary)
 
   if (!config.enabled) {
     return {}
   }
-
-  // Resolve once at startup for clearer failures later.
-  const resolvedBinary = resolveHypaBinary(config.binary)
 
   // Stash rewrites keyed by callID so tool.execute.after can annotate the
   // tool result the LLM sees. Without this, OpenCode hands the LLM the
@@ -42,15 +52,26 @@ const server: Plugin = async () => {
       const command = String(output.args?.command ?? "")
       if (!command.trim()) return
 
+      const signal =
+        "signal" in input && input.signal instanceof AbortSignal
+          ? input.signal
+          : undefined
+
       const status = await rewriteCommand(
         { ...config, binary: resolvedBinary },
         command,
+        signal,
       )
 
       switch (status.kind) {
         case "rewritten":
           output.args.command = status.command
           rewrites.set(input.callID, {
+            input: status.input,
+            command: status.command,
+            outcome: status.outcome,
+          })
+          setHypaLastRewrite({
             input: status.input,
             command: status.command,
             outcome: status.outcome,
@@ -71,6 +92,11 @@ const server: Plugin = async () => {
               command: status.command,
               outcome: "GenericWrapper",
             })
+            setHypaLastRewrite({
+              input: status.input,
+              command: status.command,
+              outcome: "GenericWrapper",
+            })
             return
           }
           throw new Error(
@@ -84,14 +110,16 @@ const server: Plugin = async () => {
       const record = rewrites.get(input.callID)
       if (!record) return
       rewrites.delete(input.callID)
+      clearHypaLastRewrite()
       annotateRewrite(output, record)
     },
   }
-}
+}) satisfies Plugin
 
-const plugin: PluginModule = {
+const plugin = {
   id: "opencode-hypa",
   server,
-}
+  tui,
+} as PluginModule & { tui: TuiPlugin }
 
 export default plugin

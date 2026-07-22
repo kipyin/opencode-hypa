@@ -1,6 +1,8 @@
 import type {
   AskNonInteractivePolicy,
-  HypaConfig,
+  ConfigSource,
+  HypaConfigWithSources,
+  PluginOptions,
   RewriteOutcome,
   RewriteResultV1,
   RewriteStatus,
@@ -16,6 +18,13 @@ const VALID_OUTCOMES = new Set<RewriteOutcome>([
 
 const BASH_TOOLS = new Set(["bash", "shell"])
 
+const DEFAULTS = {
+  binary: "hypa",
+  rewriteTimeoutMs: 5000,
+  askNonInteractive: "deny" as AskNonInteractivePolicy,
+  enabled: true,
+}
+
 export function isBashTool(tool: string): boolean {
   return BASH_TOOLS.has(tool)
 }
@@ -25,30 +34,139 @@ export function isHypaCommand(command: string): boolean {
   return trimmed === "hypa" || trimmed.startsWith("hypa ")
 }
 
-export function parseAskNonInteractive(value: string | undefined): AskNonInteractivePolicy {
-  return value?.trim().toLowerCase() === "allow" ? "allow" : "deny"
+function warnInvalid(field: string, value: unknown, fallback: unknown): void {
+  console.warn(
+    `[opencode-hypa] Invalid ${field} value ${JSON.stringify(value)}; falling back to ${JSON.stringify(fallback)}`,
+  )
 }
 
-export function parsePositiveInteger(value: string | undefined, fallback: number): number {
-  if (!value) return fallback
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+function resolveBinary(
+  env: NodeJS.ProcessEnv,
+  options: PluginOptions | undefined,
+): { value: string; source: ConfigSource } {
+  const envValue = env.OPENCODE_HYPA_BIN
+  if (envValue !== undefined) {
+    const trimmed = envValue.trim()
+    if (trimmed) {
+      return { value: trimmed, source: "env" }
+    }
+    warnInvalid("binary", envValue, DEFAULTS.binary)
+    return { value: DEFAULTS.binary, source: "default" }
+  }
+
+  const optionValue = options?.binary
+  if (optionValue !== undefined) {
+    if (typeof optionValue === "string" && optionValue.trim()) {
+      return { value: optionValue.trim(), source: "options" }
+    }
+    warnInvalid("binary", optionValue, DEFAULTS.binary)
+    return { value: DEFAULTS.binary, source: "default" }
+  }
+
+  return { value: DEFAULTS.binary, source: "default" }
 }
 
-export function parseBooleanFlag(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback
-  const normalized = value.trim().toLowerCase()
-  if (["0", "false", "no", "off"].includes(normalized)) return false
-  if (["1", "true", "yes", "on"].includes(normalized)) return true
-  return fallback
+function resolveRewriteTimeoutMs(
+  env: NodeJS.ProcessEnv,
+  options: PluginOptions | undefined,
+): { value: number; source: ConfigSource } {
+  const envValue = env.OPENCODE_HYPA_REWRITE_TIMEOUT_MS
+  if (envValue !== undefined) {
+    const parsed = Number(envValue)
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return { value: parsed, source: "env" }
+    }
+    warnInvalid("rewriteTimeoutMs", envValue, DEFAULTS.rewriteTimeoutMs)
+    return { value: DEFAULTS.rewriteTimeoutMs, source: "default" }
+  }
+
+  const optionValue = options?.rewriteTimeoutMs
+  if (optionValue !== undefined) {
+    if (Number.isInteger(optionValue) && optionValue > 0) {
+      return { value: optionValue, source: "options" }
+    }
+    warnInvalid("rewriteTimeoutMs", optionValue, DEFAULTS.rewriteTimeoutMs)
+    return { value: DEFAULTS.rewriteTimeoutMs, source: "default" }
+  }
+
+  return { value: DEFAULTS.rewriteTimeoutMs, source: "default" }
 }
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): HypaConfig {
+function resolveAskNonInteractive(
+  env: NodeJS.ProcessEnv,
+  options: PluginOptions | undefined,
+): { value: AskNonInteractivePolicy; source: ConfigSource } {
+  const envValue = env.OPENCODE_HYPA_ASK_NON_INTERACTIVE
+  if (envValue !== undefined) {
+    const normalized = envValue.trim().toLowerCase()
+    if (normalized === "allow" || normalized === "deny") {
+      return { value: normalized, source: "env" }
+    }
+    warnInvalid("askNonInteractive", envValue, DEFAULTS.askNonInteractive)
+    return { value: DEFAULTS.askNonInteractive, source: "default" }
+  }
+
+  const optionValue = options?.askNonInteractive
+  if (optionValue !== undefined) {
+    if (optionValue === "allow" || optionValue === "deny") {
+      return { value: optionValue, source: "options" }
+    }
+    warnInvalid("askNonInteractive", optionValue, DEFAULTS.askNonInteractive)
+    return { value: DEFAULTS.askNonInteractive, source: "default" }
+  }
+
+  return { value: DEFAULTS.askNonInteractive, source: "default" }
+}
+
+function resolveEnabled(
+  env: NodeJS.ProcessEnv,
+  options: PluginOptions | undefined,
+): { value: boolean; source: ConfigSource } {
+  const envValue = env.OPENCODE_HYPA_ENABLED
+  if (envValue !== undefined) {
+    const normalized = envValue.trim().toLowerCase()
+    if (["0", "false", "no", "off"].includes(normalized)) {
+      return { value: false, source: "env" }
+    }
+    if (["1", "true", "yes", "on"].includes(normalized)) {
+      return { value: true, source: "env" }
+    }
+    warnInvalid("enabled", envValue, DEFAULTS.enabled)
+    return { value: DEFAULTS.enabled, source: "default" }
+  }
+
+  const optionValue = options?.enabled
+  if (optionValue !== undefined) {
+    if (typeof optionValue === "boolean") {
+      return { value: optionValue, source: "options" }
+    }
+    warnInvalid("enabled", optionValue, DEFAULTS.enabled)
+    return { value: DEFAULTS.enabled, source: "default" }
+  }
+
+  return { value: DEFAULTS.enabled, source: "default" }
+}
+
+export function loadConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  options?: PluginOptions,
+): HypaConfigWithSources {
+  const binary = resolveBinary(env, options)
+  const rewriteTimeoutMs = resolveRewriteTimeoutMs(env, options)
+  const askNonInteractive = resolveAskNonInteractive(env, options)
+  const enabled = resolveEnabled(env, options)
+
   return {
-    binary: env.HYPA_BIN?.trim() || "hypa",
-    rewriteTimeoutMs: parsePositiveInteger(env.OPENCODE_HYPA_REWRITE_TIMEOUT_MS, 5000),
-    askNonInteractive: parseAskNonInteractive(env.OPENCODE_HYPA_ASK_NON_INTERACTIVE),
-    enabled: parseBooleanFlag(env.OPENCODE_HYPA_ENABLED, true),
+    binary: binary.value,
+    rewriteTimeoutMs: rewriteTimeoutMs.value,
+    askNonInteractive: askNonInteractive.value,
+    enabled: enabled.value,
+    sources: {
+      binary: binary.source,
+      rewriteTimeoutMs: rewriteTimeoutMs.source,
+      askNonInteractive: askNonInteractive.source,
+      enabled: enabled.source,
+    },
   }
 }
 
