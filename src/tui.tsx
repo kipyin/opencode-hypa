@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
