@@ -18,7 +18,7 @@ export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } 
  *
  * Dual-target package layout (OpenCode requires separate modules):
  *   exports["./server"] -> this file
- *   exports["./tui"]    -> ./tui.tsx
+ *   exports["./tui"]    -> ./tui.ts
  *
  * Install:
  *   opencode plugin opencode-hypa --global

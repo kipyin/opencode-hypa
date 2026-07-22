@@ -1,6 +1,6 @@
 {
   "name": "opencode-hypa",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "OpenCode plugin that rewrites bash tool calls through Hypa for local, deterministic output compression.",
   "license": "MIT",
   "type": "module",
@@ -19,8 +19,8 @@
     },
     "./tui": {
       "types": "./dist/tui.d.ts",
-      "import": "./dist/tui.jsx",
-      "default": "./dist/tui.jsx"
+      "import": "./dist/tui.js",
+      "default": "./dist/tui.js"
     }
   },
   "files": [

@@ -48,7 +48,7 @@ describe("plugin entry exports", () => {
     }
 
     assert.equal(pkg.exports?.["./server"]?.import, "./dist/index.js")
-    assert.equal(pkg.exports?.["./tui"]?.import, "./dist/tui.jsx")
+    assert.equal(pkg.exports?.["./tui"]?.import, "./dist/tui.js")
   })
 
   it("does not expose helper functions that OpenCode would treat as plugins", async () => {
@@ -86,13 +86,13 @@ describe("plugin entry exports", () => {
 })
 
 describe("built package entrypoints", () => {
-  it("emits dist files that match package exports (no tui.js ghost import)", () => {
+  it("emits a JSX-free tui.js entry for OpenCode's node_modules loader", () => {
     assert.equal(existsSync(join(root, "dist/index.js")), true, "dist/index.js missing — run npm run build")
-    assert.equal(existsSync(join(root, "dist/tui.jsx")), true, "dist/tui.jsx missing — run npm run build")
+    assert.equal(existsSync(join(root, "dist/tui.js")), true, "dist/tui.js missing — run npm run build")
     assert.equal(
-      existsSync(join(root, "dist/tui.js")),
+      existsSync(join(root, "dist/tui.jsx")),
       false,
-      "dist/tui.js must not be required; jsx:preserve emits tui.jsx",
+      "dist/tui.jsx must not ship; OpenCode skips JSX transform under node_modules",
     )
   })
 })

@@ -1,4 +1,3 @@
-/** @jsxImportSource @opentui/solid */
 import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
@@ -51,20 +50,22 @@ function snapshotDiagnosticsInput(): HypaDiagnosticsInput {
   return { ...state, binaryExists }
 }
 
+/**
+ * OpenCode's Bun JSX transform skips packages under node_modules, so a published
+ * `.jsx` entry cannot resolve `@opentui/solid/jsx-dev-runtime`. Keep this entry
+ * free of JSX and call host UI factories as plain functions instead.
+ */
 async function showHypaDialog(api: TuiPluginApi): Promise<void> {
   await cacheHypaVersion(getHypaState().resolvedBinary)
-  const snapshot = snapshotDiagnosticsInput()
-  const text = formatHypaDiagnostics(snapshot)
-  const { Dialog } = api.ui
+  const text = formatHypaDiagnostics(snapshotDiagnosticsInput())
 
   api.ui.dialog.replace(
-    () => (
-      <Dialog onClose={() => api.ui.dialog.clear()}>
-        <box flexDirection="column">
-          <text>{text}</text>
-        </box>
-      </Dialog>
-    ),
+    () =>
+      api.ui.DialogAlert({
+        title: "Hypa diagnostics",
+        message: text,
+        onConfirm: () => api.ui.dialog.clear(),
+      }),
     () => api.ui.dialog.clear(),
   )
 }
@@ -91,7 +92,7 @@ const tui: TuiPlugin = async (api) => {
 
 /**
  * TUI-only entry. OpenCode rejects modules that export both `server` and `tui`.
- * Package `exports["./tui"]` points here (compiled to `dist/tui.jsx`).
+ * Package `exports["./tui"]` points here (compiled to `dist/tui.js`).
  */
 export default {
   id: "opencode-hypa",

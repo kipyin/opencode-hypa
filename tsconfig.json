@@ -4,8 +4,6 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
-    "jsx": "preserve",
-    "jsxImportSource": "@opentui/solid",
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
@@ -17,6 +15,6 @@
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules", "test"]
 }

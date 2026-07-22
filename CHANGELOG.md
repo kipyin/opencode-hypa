@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-07-22
+
+### Fixed
+
+- Ship a JSX-free `exports["./tui"]` as `dist/tui.js`. OpenCode's Bun JSX transform skips `node_modules`, so the previous `dist/tui.jsx` failed to import (`@opentui/solid/jsx-dev-runtime`) and `/hypa` never registered.
+
 ## [1.0.2] - 2026-07-22
 
 ### Fixed
@@ -29,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tool-result annotation when Hypa rewrites a command so the LLM sees the original input.
 - Fail-open behavior on rewrite errors and timeouts; deny/ask policies for Hypa outcomes.
 
-[Unreleased]: https://github.com/kipyin/opencode-hypa/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/kipyin/opencode-hypa/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/kipyin/opencode-hypa/releases/tag/v1.0.3
 [1.0.2]: https://github.com/kipyin/opencode-hypa/releases/tag/v1.0.2
 [1.0.1]: https://github.com/kipyin/opencode-hypa/releases/tag/v1.0.1
 [1.0.0]: https://github.com/kipyin/opencode-hypa/releases/tag/v1.0.0
