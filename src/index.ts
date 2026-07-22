@@ -1,5 +1,4 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin"
-import type { TuiPlugin } from "@opencode-ai/plugin/tui"
 import { isBashTool, loadConfig } from "./policy.js"
 import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
@@ -10,22 +9,23 @@ import {
   setHypaLastRewrite,
   setHypaResolvedBinary,
 } from "./state.js"
-import { tui } from "./tui.js"
 import type { PluginOptions } from "./types.js"
 
 export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } from "./types.js"
 
 /**
- * OpenCode plugin that rewrites bash/shell tool calls through Hypa before execution.
+ * OpenCode server plugin that rewrites bash/shell tool calls through Hypa.
+ *
+ * Dual-target package layout (OpenCode requires separate modules):
+ *   exports["./server"] -> this file
+ *   exports["./tui"]    -> ./tui.tsx
  *
  * Install:
  *   opencode plugin opencode-hypa --global
  *
- * Or add to opencode.json:
- *   { "plugin": ["opencode-hypa"] }
- *
  * Important: do not re-export helper functions from this entry. OpenCode's legacy
  * plugin loader treats every exported function as a plugin entrypoint.
+ * Do not export `tui` here — a module may export server or tui, never both.
  */
 
 const server = (async (_input, options?: PluginOptions) => {
@@ -119,7 +119,6 @@ const server = (async (_input, options?: PluginOptions) => {
 const plugin = {
   id: "opencode-hypa",
   server,
-  tui,
-} as PluginModule & { tui: TuiPlugin }
+} satisfies PluginModule
 
 export default plugin

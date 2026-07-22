@@ -68,7 +68,7 @@ async function showHypaDialog(api: TuiPluginApi): Promise<void> {
   )
 }
 
-export const tui: TuiPlugin = async (api) => {
+const tui: TuiPlugin = async (api) => {
   await cacheHypaVersion(getHypaState().resolvedBinary)
 
   api.keymap.registerLayer({
@@ -86,4 +86,13 @@ export const tui: TuiPlugin = async (api) => {
     ],
     bindings: [],
   })
+}
+
+/**
+ * TUI-only entry. OpenCode rejects modules that export both `server` and `tui`.
+ * Package `exports["./tui"]` points here (compiled to `dist/tui.jsx`).
+ */
+export default {
+  id: "opencode-hypa",
+  tui,
 }
