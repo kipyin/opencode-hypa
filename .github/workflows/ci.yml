@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Weekly: catch OpenCode plugin-API / loader breakage without waiting for a PR.
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
 
 jobs:
   test:
@@ -21,3 +25,106 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+
+  # Latest OpenCode is published in lockstep on npm:
+  #   @opencode-ai/plugin@latest  — plugin SDK / hook + TUI types (this job's contract)
+  #   opencode-ai@latest          — CLI wrapper (same version)
+  # GitHub Releases at anomalyco/opencode ship the same versioned linux binaries
+  # (https://opencode.ai/install downloads those assets).
+  #
+  # The default `test` job stays on the lockfile. This job upgrades the plugin
+  # SDK to npm `latest` and re-runs typecheck/tests plus a rewrite/hook smoke.
+  opencode-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install latest OpenCode plugin API
+        run: |
+          set -euo pipefail
+          pinned="$(node -p "require('./node_modules/@opencode-ai/plugin/package.json').version")"
+          npm install --no-save --no-package-lock \
+            @opencode-ai/plugin@latest \
+            @opentui/core@latest \
+            @opentui/keymap@latest \
+            @opentui/solid@latest
+          latest="$(node -p "require('./node_modules/@opencode-ai/plugin/package.json').version")"
+          registry="$(npm view @opencode-ai/plugin version)"
+          {
+            echo "## OpenCode latest compatibility"
+            echo ""
+            echo "- lockfile \`@opencode-ai/plugin\`: \`${pinned}\`"
+            echo "- installed \`@opencode-ai/plugin@latest\`: \`${latest}\`"
+            echo "- npm registry \`latest\` dist-tag: \`${registry}\`"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "OPENCODE_PLUGIN_VERSION=${latest}" >> "$GITHUB_ENV"
+          if [ "$latest" != "$registry" ]; then
+            echo "::warning::installed @opencode-ai/plugin@${latest} != registry latest ${registry}"
+          fi
+
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+      - name: Smoke rewrite/hook path against dist
+        run: node scripts/smoke-plugin-hooks.mjs
+
+      - name: Install OpenCode CLI (npm latest, GitHub release fallback)
+        id: cli
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          prefix="$HOME/.local/opencode-cli"
+          mkdir -p "$prefix"
+          # Prefix install avoids needing a writable global npm root. Same
+          # package OpenCode publishes in lockstep with @opencode-ai/plugin.
+          if npm install --prefix "$prefix" opencode-ai@latest; then
+            echo "$prefix/node_modules/.bin" >> "$GITHUB_PATH"
+            export PATH="$prefix/node_modules/.bin:$PATH"
+            if command -v opencode >/dev/null && opencode --version; then
+              ver="$(opencode --version | tr -d '\r')"
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              echo "source=npm" >> "$GITHUB_OUTPUT"
+              echo "- CLI: \`${ver}\` (npm \`opencode-ai@latest\`)" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
+
+          echo "::warning::npm install opencode-ai@latest failed; trying GitHub release binary"
+          tmpdir="$(mktemp -d)"
+          archive="$tmpdir/opencode-linux-x64.tar.gz"
+          if curl -fsSL -o "$archive" \
+            "https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-x64.tar.gz"; then
+            tar -xzf "$archive" -C "$tmpdir"
+            bin="$(find "$tmpdir" -type f -name opencode | head -1)"
+            if [ -n "$bin" ]; then
+              mkdir -p "$HOME/.local/bin"
+              install -m 0755 "$bin" "$HOME/.local/bin/opencode"
+              echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+              export PATH="$HOME/.local/bin:$PATH"
+              if command -v opencode >/dev/null && opencode --version; then
+                ver="$(opencode --version | tr -d '\r')"
+                echo "ok=true" >> "$GITHUB_OUTPUT"
+                echo "source=github-release" >> "$GITHUB_OUTPUT"
+                echo "- CLI: \`${ver}\` (GitHub release \`opencode-linux-x64.tar.gz\`)" >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+            fi
+          fi
+
+          echo "::warning::Could not install OpenCode CLI; loader smoke will be skipped"
+          echo "- CLI: **not installed** (loader smoke skipped)" >> "$GITHUB_STEP_SUMMARY"
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - name: Smoke OpenCode plugin loader
+        if: steps.cli.outputs.ok == 'true'
+        env:
+          SMOKE_REQUIRE_CLI: "1"
+        run: bash scripts/smoke-opencode-loader.sh

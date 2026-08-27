@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- CI `opencode-latest` job (push/PR + weekly cron) installs npm `@opencode-ai/plugin@latest` and re-runs typecheck, tests, and a rewrite/hook smoke against current OpenCode.
+
 ## [1.0.3] - 2026-07-22
 
 ### Fixed
