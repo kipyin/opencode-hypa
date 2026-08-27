@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - CI `opencode-latest` job (push/PR + weekly cron) installs npm `@opencode-ai/plugin@latest` and re-runs typecheck, tests, and a rewrite/hook smoke against current OpenCode.
+- Loader smoke now also creates a session and drives `POST /session/:id/shell` (plus a dummy-model bash-tool fallback) so CI notices if OpenCode loads the plugin but stops dispatching `tool.execute.before` on a real shell path.
 
 ## [1.0.3] - 2026-07-22
 
