@@ -123,6 +123,8 @@ jobs:
           echo "ok=false" >> "$GITHUB_OUTPUT"
           exit 1
 
+      # Packs the plugin, starts `opencode serve`, asserts the v1 loader, then
+      # drives POST /session/:id/shell (and a dummy-model bash fallback).
       - name: Smoke OpenCode plugin loader
         if: steps.cli.outputs.ok == 'true'
         env:
