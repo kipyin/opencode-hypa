@@ -112,6 +112,8 @@ npm test
 npm run build
 ```
 
+CI keeps a fast lockfile job on Node 18 and 22. A separate `opencode-latest` job (push/PR and weekly) installs [`@opencode-ai/plugin@latest`](https://www.npmjs.com/package/@opencode-ai/plugin) from npm — the same version OpenCode publishes for the CLI (`opencode-ai` / GitHub Releases) — and re-runs typecheck, tests, plus a rewrite/hook smoke.
+
 ## Publishing
 
 Releases publish to npm via [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) (GitHub OIDC). No long-lived npm token is stored in the repo.
