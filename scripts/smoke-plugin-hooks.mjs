@@ -42,7 +42,7 @@ function assertV1Shape(mod, kind) {
 }
 
 const pkg = require(join(root, "package.json"))
-const fakeHypa = join(root, "test/fixtures/fake-hypa-rewrite.js")
+const fakeHypa = join(root, "test/fixtures/fake-hypa-configurable.js")
 if (!existsSync(fakeHypa)) throw new Error(`missing fixture ${fakeHypa}`)
 
 const serverUrl = pathToFileURL(exportPath(pkg, "./server")).href

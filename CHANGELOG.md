@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI `opencode-latest` job (push/PR + weekly cron) installs npm `@opencode-ai/plugin@latest` and re-runs typecheck, tests, and a rewrite/hook smoke against current OpenCode.
 - Loader smoke now also creates a session and drives `POST /session/:id/shell` (plus a dummy-model bash-tool fallback) so CI notices if OpenCode loads the plugin but stops dispatching `tool.execute.before` on a real shell path.
 
+### Removed
+
+- Dead leftovers after `formatHypaDiagnostics` and the JSX-free TUI: unused `formatStatus`, `scripts/probe-tui-load.mjs`, and the duplicate `fake-hypa-rewrite.js` fixture.
+
 ## [1.0.3] - 2026-07-22
 
 ### Fixed

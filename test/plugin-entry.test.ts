@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { existsSync } from "node:fs"
+import { readFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, it } from "node:test"
@@ -40,9 +41,7 @@ describe("plugin entry exports", () => {
 
   it("declares separate package exports for server and tui targets", async () => {
     const pkg = JSON.parse(
-      await import("node:fs/promises").then((fs) =>
-        fs.readFile(join(root, "package.json"), "utf8"),
-      ),
+      await readFile(join(root, "package.json"), "utf8"),
     ) as {
       exports?: Record<string, { import?: string }>
     }

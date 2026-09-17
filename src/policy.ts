@@ -217,21 +217,3 @@ export function mapRewriteResult(result: RewriteResultV1): RewriteStatus {
       }
   }
 }
-
-export function formatStatus(status: RewriteStatus | undefined): string {
-  if (!status) return "none"
-  switch (status.kind) {
-    case "rewritten":
-      return `${status.outcome}: ${status.input} => ${status.command}`
-    case "passthrough":
-      return `Passthrough: ${status.input}`
-    case "deny":
-      return `Deny: ${status.reason}`
-    case "ask":
-      return `Ask: ${status.reason}`
-    case "skipped":
-      return `Skipped: ${status.reason}`
-    case "error":
-      return `Error: ${status.error}`
-  }
-}

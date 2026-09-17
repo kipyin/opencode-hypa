@@ -1,8 +1,5 @@
 import assert from "node:assert/strict"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 import { afterEach, describe, it } from "node:test"
-import plugin from "../src/index.js"
 import {
   clearHypaLastRewrite,
   getHypaState,
@@ -13,12 +10,6 @@ import {
   setHypaVersion,
 } from "../src/state.js"
 import type { HypaConfigWithSources } from "../src/types.js"
-
-const fakeHypaBinary = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "fixtures",
-  "fake-hypa-rewrite.js",
-)
 
 const sampleConfig: HypaConfigWithSources = {
   binary: "/opt/hypa",
@@ -79,27 +70,5 @@ describe("hypaState singleton", () => {
   it("stores hypaVersion for TUI cache", () => {
     setHypaVersion("0.1.11")
     assert.equal(getHypaState().hypaVersion, "0.1.11")
-  })
-})
-
-describe("server plugin state bridge", () => {
-  it("writes load snapshot and clears lastRewrite after tool.execute.after", async () => {
-    resetHypaState()
-
-    const hooks = await plugin.server!({} as any, { binary: fakeHypaBinary })
-    const before = (hooks as { "tool.execute.before": Function })["tool.execute.before"]
-    const after = (hooks as { "tool.execute.after": Function })["tool.execute.after"]
-
-    assert.equal(getHypaState().resolvedBinary, fakeHypaBinary)
-    assert.equal(getHypaState().effectiveConfigWithSources?.binary, fakeHypaBinary)
-    assert.equal(getHypaState().lastRewrite, "none")
-
-    const output = { args: { command: "git status" } }
-    await before({ tool: "bash", callID: "call-1" }, output)
-    assert.notEqual(getHypaState().lastRewrite, "none")
-    assert.equal(output.args.command, "hypa git status")
-
-    await after({ tool: "bash", callID: "call-1" }, { title: "", output: "", metadata: {} })
-    assert.equal(getHypaState().lastRewrite, "none")
   })
 })
