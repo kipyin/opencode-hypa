@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url"
 import { afterEach, describe, it } from "node:test"
 import plugin from "../src/index.js"
 import {
-  clearHypaLastRewrite,
   getHypaState,
   resetHypaState,
   setHypaEffectiveConfigWithSources,
@@ -66,16 +65,6 @@ describe("hypaState singleton", () => {
     assert.equal(typeof state.lastRewrite.timestamp, "number")
   })
 
-  it("clears lastRewrite to none", () => {
-    setHypaLastRewrite({
-      input: "git status",
-      command: "hypa git status",
-      outcome: "Rewritten",
-    })
-    clearHypaLastRewrite()
-    assert.equal(getHypaState().lastRewrite, "none")
-  })
-
   it("stores hypaVersion for TUI cache", () => {
     setHypaVersion("0.1.11")
     assert.equal(getHypaState().hypaVersion, "0.1.11")
@@ -83,7 +72,7 @@ describe("hypaState singleton", () => {
 })
 
 describe("server plugin state bridge", () => {
-  it("writes load snapshot and clears lastRewrite after tool.execute.after", async () => {
+  it("writes load snapshot and keeps lastRewrite after tool.execute.after", async () => {
     resetHypaState()
 
     const hooks = await plugin.server!({} as any, { binary: fakeHypaBinary })
@@ -100,6 +89,11 @@ describe("server plugin state bridge", () => {
     assert.equal(output.args.command, "hypa git status")
 
     await after({ tool: "bash", callID: "call-1" }, { title: "", output: "", metadata: {} })
-    assert.equal(getHypaState().lastRewrite, "none")
+    const lastRewrite = getHypaState().lastRewrite
+    assert.notEqual(lastRewrite, "none")
+    if (lastRewrite === "none") return
+    assert.equal(lastRewrite.input, "git status")
+    assert.equal(lastRewrite.command, "hypa git status")
+    assert.equal(lastRewrite.outcome, "Rewritten")
   })
 })

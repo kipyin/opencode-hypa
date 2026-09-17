@@ -65,20 +65,25 @@ describe("T5: server plugin hook boundary integration", () => {
 
     await hooks["tool.execute.after"]({ tool: "bash", callID }, afterOutput)
 
-    assert.equal(
-      afterOutput.title,
-      "[hypa Rewritten] git status => hypa git status\ngit status",
-    )
-    assert.equal(
-      afterOutput.output,
-      "[hypa Rewritten] git status => hypa git status\n\nOn branch main",
-    )
+    const annotatedTitle = "[hypa Rewritten] git status => hypa git status\ngit status"
+    const annotatedOutput = "[hypa Rewritten] git status => hypa git status\n\nOn branch main"
+    assert.equal(afterOutput.title, annotatedTitle)
+    assert.equal(afterOutput.output, annotatedOutput)
     assert.deepEqual(afterOutput.metadata.hypaRewrite, {
       input: "git status",
       command: "hypa git status",
       outcome: "Rewritten",
     })
-    assert.equal(getHypaState().lastRewrite, "none")
+    const stateAfterAfter = getHypaState()
+    assert.notEqual(stateAfterAfter.lastRewrite, "none")
+    if (stateAfterAfter.lastRewrite === "none") return
+    assert.equal(stateAfterAfter.lastRewrite.input, "git status")
+    assert.equal(stateAfterAfter.lastRewrite.command, "hypa git status")
+    assert.equal(stateAfterAfter.lastRewrite.outcome, "Rewritten")
+
+    await hooks["tool.execute.after"]({ tool: "bash", callID }, afterOutput)
+    assert.equal(afterOutput.title, annotatedTitle)
+    assert.equal(afterOutput.output, annotatedOutput)
   })
 
   it("fail-opens on an already-aborted signal without spawning hypa", async () => {

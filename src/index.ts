@@ -4,7 +4,6 @@ import { resolveHypaBinary } from "./resolve.js"
 import { rewriteCommand } from "./rewrite.js"
 import { annotateRewrite, type RewriteRecord } from "./annotate.js"
 import {
-  clearHypaLastRewrite,
   setHypaEffectiveConfigWithSources,
   setHypaLastRewrite,
   setHypaResolvedBinary,
@@ -110,7 +109,6 @@ const server = (async (_input, options?: PluginOptions) => {
       const record = rewrites.get(input.callID)
       if (!record) return
       rewrites.delete(input.callID)
-      clearHypaLastRewrite()
       annotateRewrite(output, record)
     },
   }
