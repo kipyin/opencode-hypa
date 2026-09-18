@@ -14,9 +14,7 @@ export type HypaStateSnapshot = {
   hypaVersion: string | undefined
 }
 
-type HypaStateData = HypaStateSnapshot
-
-function createInitialState(): HypaStateData {
+function createInitialState(): HypaStateSnapshot {
   return {
     resolvedBinary: undefined,
     effectiveConfigWithSources: undefined,

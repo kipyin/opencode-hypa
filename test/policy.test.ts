@@ -1,7 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it, mock } from "node:test"
 import {
-  formatStatus,
   isBashTool,
   isHypaCommand,
   loadConfig,
@@ -205,19 +204,5 @@ describe("loadConfig", () => {
     const config = loadConfig({ HYPA_BIN: "/legacy/hypa" })
     assert.equal(config.binary, "hypa")
     assert.equal(config.sources.binary, "default")
-  })
-})
-
-describe("formatStatus", () => {
-  it("formats rewritten status", () => {
-    assert.equal(
-      formatStatus({
-        kind: "rewritten",
-        outcome: "Rewritten",
-        input: "git status",
-        command: "hypa git status",
-      }),
-      "Rewritten: git status => hypa git status",
-    )
   })
 })

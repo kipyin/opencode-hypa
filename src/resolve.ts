@@ -35,7 +35,7 @@ export function getExecArgs(
   return [binary, args]
 }
 
-export function resolveNativeHypaBinary(
+function resolveNativeHypaBinary(
   exists: (p: string) => boolean = existsSync,
   requireResolve: RequireResolve = require.resolve.bind(require),
   platformName: string = platform(),
