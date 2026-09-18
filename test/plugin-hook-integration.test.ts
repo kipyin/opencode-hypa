@@ -9,7 +9,6 @@ import { getHypaState, resetHypaState } from "../src/state.js"
 import type { PluginOptions } from "../src/types.js"
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures")
-const fakeHypaRewrite = join(fixturesDir, "fake-hypa-rewrite.js")
 const fakeHypaConfigurable = join(fixturesDir, "fake-hypa-configurable.js")
 const spawnTrackerPath = join(fixturesDir, "spawn-tracker.js")
 
@@ -48,7 +47,7 @@ afterEach(() => {
 
 describe("T5: server plugin hook boundary integration", () => {
   it("rewrites, records state, and annotates through before and after hooks", async () => {
-    const hooks = await loadHooks({ binary: fakeHypaRewrite })
+    const hooks = await loadHooks({ binary: fakeHypaConfigurable })
     const callID = "call-rewritten"
     const beforeOutput: BeforeOutput = { args: { command: "git status" } }
     const afterOutput: AfterOutput = { title: "git status", output: "On branch main", metadata: { exit: 0 } }
