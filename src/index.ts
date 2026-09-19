@@ -13,6 +13,17 @@ import type { PluginOptions } from "./types.js"
 
 export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } from "./types.js"
 
+function applyRewrite(
+  output: { args: { command?: unknown } },
+  rewrites: Map<string, RewriteRecord>,
+  callID: string,
+  record: RewriteRecord,
+): void {
+  output.args.command = record.command
+  rewrites.set(callID, record)
+  setHypaLastRewrite(record)
+}
+
 /**
  * OpenCode server plugin that rewrites bash/shell tool calls through Hypa.
  *
@@ -65,13 +76,7 @@ const server = (async (_input, options?: PluginOptions) => {
 
       switch (status.kind) {
         case "rewritten":
-          output.args.command = status.command
-          rewrites.set(input.callID, {
-            input: status.input,
-            command: status.command,
-            outcome: status.outcome,
-          })
-          setHypaLastRewrite({
+          applyRewrite(output, rewrites, input.callID, {
             input: status.input,
             command: status.command,
             outcome: status.outcome,
@@ -86,22 +91,20 @@ const server = (async (_input, options?: PluginOptions) => {
           throw new Error(status.reason)
         case "ask":
           if (config.askNonInteractive === "allow") {
-            output.args.command = status.command
-            rewrites.set(input.callID, {
+            applyRewrite(output, rewrites, input.callID, {
               input: status.input,
               command: status.command,
-              outcome: "GenericWrapper",
-            })
-            setHypaLastRewrite({
-              input: status.input,
-              command: status.command,
-              outcome: "GenericWrapper",
+              outcome: "Ask",
             })
             return
           }
           throw new Error(
             `${status.reason} Non-interactive fallback is deny (set OPENCODE_HYPA_ASK_NON_INTERACTIVE=allow to allow).`,
           )
+        default: {
+          const _exhaustive: never = status
+          return _exhaustive
+        }
       }
     },
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Ask-allow no longer records or annotates Hypa `Ask` as `GenericWrapper`. Last rewrite and `[hypa Ask]` now keep the real outcome.
+
 ### Added
 
 - CI `opencode-latest` job (push/PR + weekly cron) installs npm `@opencode-ai/plugin@latest` and re-runs typecheck, tests, and a rewrite/hook smoke against current OpenCode.

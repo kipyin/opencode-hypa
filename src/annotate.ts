@@ -1,7 +1,7 @@
 export type RewriteRecord = {
   input: string
   command: string
-  outcome: "Rewritten" | "GenericWrapper"
+  outcome: "Rewritten" | "GenericWrapper" | "Ask"
 }
 
 export type ToolAfterOutput = {
