@@ -165,18 +165,18 @@ describe("T5: server plugin hook boundary integration", () => {
     const stateAfterBefore = getHypaState()
     assert.notEqual(stateAfterBefore.lastRewrite, "none")
     if (stateAfterBefore.lastRewrite === "none") return
-    assert.equal(stateAfterBefore.lastRewrite.outcome, "GenericWrapper")
+    assert.equal(stateAfterBefore.lastRewrite.outcome, "Ask")
 
     await hooks["tool.execute.after"]({ tool: "bash", callID }, afterOutput)
 
     assert.equal(
       afterOutput.title,
-      "[hypa GenericWrapper] curl https://example.com => curl https://example.com",
+      "[hypa Ask] curl https://example.com => curl https://example.com",
     )
     assert.deepEqual(afterOutput.metadata.hypaRewrite, {
       input: "curl https://example.com",
       command: "curl https://example.com",
-      outcome: "GenericWrapper",
+      outcome: "Ask",
     })
   })
 })
