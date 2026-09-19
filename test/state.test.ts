@@ -1,7 +1,6 @@
 import assert from "node:assert/strict"
 import { afterEach, describe, it } from "node:test"
 import {
-  clearHypaLastRewrite,
   getHypaState,
   resetHypaState,
   setHypaEffectiveConfigWithSources,
@@ -55,16 +54,6 @@ describe("hypaState singleton", () => {
     assert.equal(state.lastRewrite.command, "hypa git status")
     assert.equal(state.lastRewrite.outcome, "Rewritten")
     assert.equal(typeof state.lastRewrite.timestamp, "number")
-  })
-
-  it("clears lastRewrite to none", () => {
-    setHypaLastRewrite({
-      input: "git status",
-      command: "hypa git status",
-      outcome: "Rewritten",
-    })
-    clearHypaLastRewrite()
-    assert.equal(getHypaState().lastRewrite, "none")
   })
 
   it("stores hypaVersion for TUI cache", () => {

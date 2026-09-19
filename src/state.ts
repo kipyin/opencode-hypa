@@ -60,10 +60,6 @@ export function setHypaLastRewrite(record: {
   }
 }
 
-export function clearHypaLastRewrite(): void {
-  state = { ...state, lastRewrite: "none" }
-}
-
 export function setHypaVersion(hypaVersion: string): void {
   state = { ...state, hypaVersion }
 }

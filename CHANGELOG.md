@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Ask-allow no longer records or annotates Hypa `Ask` as `GenericWrapper`. Last rewrite and `[hypa Ask]` now keep the real outcome.
+- Keep `/hypa` last rewrite after `tool.execute.after` so the diagnostics modal still shows the last successful rewrite.
 
 ### Added
 
