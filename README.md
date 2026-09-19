@@ -65,18 +65,20 @@ The note is prepended to both `output.title` and `output.output`, and the full r
 
 ## Configuration
 
-Set options in `opencode.json` as the second element of the plugin tuple, or override any field with an environment variable (env wins over options).
+Set options in `opencode.json` as the second element of a nested plugin tuple (`string | [name, options]` — one array item, not a string plus a sibling object), or override any field with an environment variable (env wins over options).
 
 ```json
 {
   "plugin": [
-    "opencode-hypa",
-    {
-      "binary": "hypa",
-      "rewriteTimeoutMs": 5000,
-      "askNonInteractive": "deny",
-      "enabled": true
-    }
+    [
+      "opencode-hypa",
+      {
+        "binary": "hypa",
+        "rewriteTimeoutMs": 5000,
+        "askNonInteractive": "deny",
+        "enabled": true
+      }
+    ]
   ]
 }
 ```
