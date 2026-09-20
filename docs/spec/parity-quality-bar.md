@@ -1,6 +1,6 @@
 # Parity/Quality Bar for opencode-hypa
 
-**Status:** Spec (ready for agent). Collapses wayfinder map #1 and grilling tickets #6, #7, #8, #9, #11.
+**Status:** Shipped v1 — keep this document aligned with the tree. Collapses wayfinder map #1 and grilling tickets #6, #7, #8, #9, #11.
 
 ## Problem Statement
 
@@ -10,7 +10,7 @@ opencode-hypa is the missing hardwire: a server + TUI plugin that intercepts eve
 
 ## Solution
 
-A single OpenCode plugin package (`opencode-hypa`) with two entries:
+A single OpenCode plugin package (`opencode-hypa`) with two package exports (`./server` and `./tui`):
 
 - a **server plugin** that registers `tool.execute.before` (rewrite the command) and `tool.execute.after` (annotate the tool result the LLM sees; record state for the diagnostics command);
 - a **TUI plugin** that registers a `/hypa` slash command opening a modal diagnostics dialog showing resolved binary, hypa version, effective config (with per-field source), enabled flag, and the last rewrite.
@@ -49,10 +49,15 @@ The parity bar is `@hypabolic/pi-hypa`: every behavior Pi hardwires for Pi, open
 
 ### Plugin entry shape
 
-The package exports a single `PluginModule` with both `server` and `tui` entries. The legacy loader treats every exported function as an entrypoint, so no helper functions are re-exported from the entry module (existing convention, already enforced by `test/plugin-entry.test.ts`).
+OpenCode rejects a combined `{ server, tui }` `PluginModule` (since 1.0.1). The package ships two entries, locked by `package.json` `exports` and `test/plugin-entry.test.ts`:
 
-- **Server entry signature:** `Plugin<PluginOptions>` — `server(input, options?)` receives the `PluginOptions` tuple element directly. Existing no-arg `Plugin` shape is upgraded; `loadConfig(env, options?)` mirrors.
-- **TUI entry signature:** `TuiPlugin` — `tui(api, options, meta)` registers the `/hypa` command via `api.keymap.registerLayer({ commands, bindings })` (current, non-deprecated API; future-proof against v2 removal of `api.command`).
+- `exports["./server"]` → `dist/index.js` — server-only `{ id, server }` (`tui` must not be present)
+- `exports["./tui"]` → `dist/tui.js` — TUI-only `{ id, tui }` (`server` must not be present)
+
+The legacy loader treats every exported function as an entrypoint, so no helper functions are re-exported from the server entry module.
+
+- **Server entry signature:** `Plugin` — `server(input, options?)` receives the `PluginOptions` tuple element directly. `loadConfig(env, options?)` mirrors.
+- **TUI entry signature:** `TuiPlugin` — `tui(api, options, meta)` registers `/hypa` via `api.keymap.registerLayer({ commands, bindings })` (current, non-deprecated API; `api.command` is deprecated for v2).
 
 ### Rewrite contract (parity with `@hypabolic/pi-hypa`)
 
@@ -89,7 +94,7 @@ Fields (all optional in `PluginOptions`):
 
 - **Name:** `/hypa`, hardcoded. Not configurable via `PluginOptions` in v1.
 - **Registration:** `api.keymap.registerLayer({ commands, bindings })` — `commands` declares the slash command `hypa`; `bindings` empty (no default keybind in v1).
-- **Display:** modal `api.ui.Dialog`, centered, Esc-dismissed. Snapshot on open (re-open to refresh).
+- **Display:** `api.ui.DialogAlert` (title + message) pushed through `api.ui.dialog.replace`, confirm-dismissed. Snapshot on open (re-open to refresh). Not `api.ui.Dialog` — OpenCode's Bun JSX transform skips packages under `node_modules`, so the TUI entry stays JSX-free and uses host UI factories.
 - **Missing binary:** renders an in-dialog error state with the missing path; no crash.
 - **Status fields (five):**
   1. `enabled` flag (true/false).
@@ -100,10 +105,9 @@ Fields (all optional in `PluginOptions`):
 
 ### State bridge (server → TUI)
 
-- **Mechanism:** shared in-process module (`src/state.ts` singleton). The server plugin and TUI plugin live in the same package/module graph; the TUI imports the singleton directly. No RPC (OpenCode SDK exposes no plugin-to-plugin RPC — verified in `@opencode-ai/sdk/dist/v2/gen/sdk.gen.d.ts`), no `api.kv`, no disk file.
-- **Server writes via:** existing `tool.execute.before` / `tool.execute.after` hooks plus a load-time snapshot of `resolvedBinary` and `effectiveConfigWithSources`. No new hook. The existing per-callID `rewrites` Map (`src/index.ts:36`) is extended to also publish a `lastRewrite` slot.
-- **History depth:** last rewrite only (matches Pi; matches existing Map semantics — one record per callID, deleted after `tool.execute.after`).
-- **Fallback risk (verify at implement time):** if the TUI plugin cannot import the server plugin's module directly (e.g. OpenCode loads them from separate module graphs), the state bridge falls back to TUI-local storage populated by the same hook the server uses. This is an implementation-time discovery, not a spec reopen.
+- **Mechanism:** in-process module (`src/state.ts` singleton). The TUI entry imports the singleton directly. No RPC (OpenCode SDK exposes no plugin-to-plugin RPC), no `api.kv`, no disk file, no TUI-local fallback.
+- **Server writes via:** `tool.execute.before` / `tool.execute.after` plus a load-time snapshot of `resolvedBinary` and `effectiveConfigWithSources`. `applyRewrite` publishes `lastRewrite` when a rewrite is applied.
+- **History depth:** last rewrite only (matches Pi). The per-callID `rewrites` Map is only for after-hook annotation and is deleted after `tool.execute.after`; `lastRewrite` is **not** cleared then, so `/hypa` still shows the last successful rewrite.
 
 ### Ask handling
 
@@ -116,7 +120,7 @@ Fields (all optional in `PluginOptions`):
 
 - **Tests:**
   - Unit: `policy.ts` (loadConfig with sources, parseRewriteJson, mapRewriteResult, isBashTool, isHypaCommand), `rewrite.ts` (rewriteCommand incl. AbortSignal abort path), `annotate.ts`, `resolve.ts`.
-  - Integration (mocked-rewrite hook): the server plugin entry exercised end-to-end with an injected fake rewrite — assert command rewritten, tool result annotated, state module written, AbortSignal plumbed.
+  - Integration (hook boundary): the server plugin entry exercised end-to-end with a fake `hypa` binary — assert command rewritten, tool result annotated, state module written, AbortSignal plumbed.
   - TUI: `formatHypaDiagnostics(state): string` (or structured rows) tested as a pure function. The TUI plugin entry itself (registering the command, opening the dialog) is thin glue and not unit-tested.
 - **Node matrix:** minimum 18, CI on 22.
 - **Release:** semver; `CHANGELOG.md` in keep-a-changelog format; publish via the existing GitHub Trusted Publisher OIDC workflow (`.github/workflows/publish.yml`).
@@ -129,13 +133,13 @@ Test external behavior, not implementation details. The plugin is a thin adapter
 
 - **Pure functions** (`policy`, `rewrite`, `annotate`, `resolve`) are tested directly with inputs and expected outputs.
 - **The server plugin entry** is tested at the hook boundary: invoke the returned `tool.execute.before` / `tool.execute.after` with shaped input/output objects and assert the observable effects on those objects (command changed, annotation prepended, metadata written) plus side effects on the state module.
-- **The TUI formatter** is tested as a pure function: given a state snapshot, assert the rendered string/rows. The `api.ui.Dialog` call itself is not asserted.
+- **The TUI formatter** is tested as a pure function: given a state snapshot, assert the rendered string/rows. The `api.ui.DialogAlert` call itself is not asserted.
 
 ### Seams
 
 The plugin has **two architectural seams**:
 
-1. **Server plugin entry** (integration). One test invokes `server(input, options)`, then drives `tool.execute.before` and `tool.execute.after` with a mocked `runRewrite` injected. Covers: options loading, rewrite path, fail-open, AbortSignal plumbing, annotation, state-bridge write. This is the single highest-value seam.
+1. **Server plugin entry** (integration). `test/plugin-hook-integration.test.ts` invokes `server(input, options)`, then drives `tool.execute.before` and `tool.execute.after` with a fake `hypa` binary. Covers: options loading, rewrite path, fail-open, AbortSignal plumbing, annotation, state-bridge write. This is the single highest-value seam.
 2. **TUI diagnostics formatter** (pure unit). `formatHypaDiagnostics(state) → string`. Covers the operator-visibility contract without depending on the TUI runtime.
 
 Pure-function unit tests under #1 are kept but aren't additional architectural seams — they're local tests of local functions.
@@ -145,7 +149,8 @@ Pure-function unit tests under #1 are kept but aren't additional architectural s
 - `test/rewrite.test.ts` — already tests `rewriteCommand` with real `loadConfig({})`; extended for AbortSignal.
 - `test/policy.test.ts` — already tests pure parsers; extended for source metadata.
 - `test/annotate.test.ts` — already tests `annotateRewrite`; unchanged.
-- `test/plugin-entry.test.ts` — already tests the `PluginModule` export shape; extended into the integration test.
+- `test/plugin-entry.test.ts` — split server/tui export shape (`exports["./server"]` / `exports["./tui"]`) and built `dist/` entries (requires `npm run build` first).
+- `test/plugin-hook-integration.test.ts` — server hook boundary integration (`tool.execute.before` + `tool.execute.after`).
 
 ## Out of Scope
 
@@ -166,18 +171,18 @@ Pure-function unit tests under #1 are kept but aren't additional architectural s
 ### Map history
 
 - Wayfinder map: #1.
-- Research (closed): #2 (diagnostics command API), #3 (Ask confirmation path), #4 (Pi hardwire delta inventory), #5 (peer plugin options conventions). Research assets live under `docs/research/` on branch `research/charting-batch`.
+- Research (closed): #2 (diagnostics command API), #3 (Ask confirmation path), #4 (Pi hardwire delta inventory), #5 (peer plugin options conventions).
 - Grilling (closed): #6 (plugin options schema), #7 (diagnostics command contents), #8 (must-match vs nice-to-have deltas), #9 (spec artifact shape), #11 (Ask confirmation UX).
 
-### Risks to verify at implement time
+### Settled at implement time
 
-1. **AbortSignal population** — whether `tool.execute.before`'s `input.signal` is actually populated by OpenCode today. If not, AbortSignal parity becomes "wire it defensively; no-op until OpenCode populates it." No spec change.
-2. **TUI ↔ server module-graph coupling** — whether the TUI plugin can import the server plugin's in-process state singleton directly (same module graph) or whether OpenCode loads them from separate graphs. Determines the exact bridge shape; fallback is TUI-local storage populated by the same hook. Settled at implement time, not now.
-3. **`api.keymap.registerLayer` stability** — current, non-deprecated API in the installed `@opencode-ai/plugin` types; verify the command shape (`commands` / `bindings` / slash registration) against an existing OpenCode plugin that uses it before finalizing the registration code.
+1. **AbortSignal population** — OpenCode's `tool.execute.before` input type does not currently include `signal`. The rewrite path still threads `input.signal` when it is an `AbortSignal` (defensive; no-op until the host populates it). Covered by unit and hook-integration tests.
+2. **TUI ↔ server state** — the TUI imports `src/state.ts` directly. No TUI-local fallback was added.
+3. **`api.keymap.registerLayer`** — shipped as the `/hypa` registration API (`commands` / `bindings` / `slashName`).
 
 ### Glossary
 
-A `CONTEXT.md` glossary will be produced by `/domain-modeling` during implementation. For now, the spec uses these terms in their OpenCode / Hypa sense:
+Terms in their OpenCode / Hypa sense:
 
 - **Hardwire** — intercept a host's tool call and rewrite it through Hypa before execution, without requiring the model to choose Hypa tools.
 - **Rewrite** — `hypa rewrite --json <cmd>`; returns `{ input, outcome, command }`.
