@@ -50,10 +50,7 @@ jobs:
           set -euo pipefail
           pinned="$(node -p "require('./node_modules/@opencode-ai/plugin/package.json').version")"
           npm install --no-save --no-package-lock \
-            @opencode-ai/plugin@latest \
-            @opentui/core@latest \
-            @opentui/keymap@latest \
-            @opentui/solid@latest
+            @opencode-ai/plugin@latest
           latest="$(node -p "require('./node_modules/@opencode-ai/plugin/package.json').version")"
           registry="$(npm view @opencode-ai/plugin version)"
           {
