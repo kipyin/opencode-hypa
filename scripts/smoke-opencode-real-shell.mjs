@@ -16,7 +16,7 @@
  *      SMOKE_REQUIRE_REAL_SHELL=1, which turns this into a hard fail)
  *   1  hard failure
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs"
+import { readFileSync, existsSync } from "node:fs"
 
 const port = Number(process.env.SMOKE_PORT || 14096)
 const workdir = process.env.SMOKE_WORKDIR || process.cwd()
@@ -31,8 +31,6 @@ const report = {
   opencode: null,
   sessionID: null,
   agent: null,
-  experimentalToolIDs: null,
-  experimentalToolInvoke: null,
   shell: null,
   dummyMessage: null,
   dispatch: [],
@@ -75,15 +73,6 @@ function looksRewritten(value) {
   if (typeof value !== "string") return false
   const trimmed = value.trim()
   return trimmed === "hypa" || trimmed.startsWith("hypa ")
-}
-
-function collectStrings(value, out = []) {
-  if (typeof value === "string") out.push(value)
-  else if (Array.isArray(value)) for (const item of value) collectStrings(item, out)
-  else if (value && typeof value === "object") {
-    for (const item of Object.values(value)) collectStrings(item, out)
-  }
-  return out
 }
 
 function readDispatch() {
@@ -169,58 +158,6 @@ function pickAgent(agents) {
   return named("build") || named("general") || list.find((agent) => !agent?.hidden) || list[0]
 }
 
-async function startEventLog() {
-  const events = []
-  const controller = new AbortController()
-  const consume = async (path) => {
-    try {
-      const res = await fetch(apiUrl(path), { signal: controller.signal })
-      if (!res.ok || !res.body) return
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = ""
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const parts = buf.split("\n")
-        buf = parts.pop() ?? ""
-        for (const line of parts) {
-          const trimmed = line.trim()
-          if (!trimmed.startsWith("data:")) continue
-          const data = trimmed.slice(5).trim()
-          if (!data || data === "[DONE]") continue
-          try {
-            events.push(JSON.parse(data))
-          } catch {
-            events.push({ raw: data })
-          }
-        }
-      }
-    } catch (error) {
-      if (controller.signal.aborted) return
-      events.push({ error: error instanceof Error ? error.message : String(error), path })
-    }
-  }
-  const tasks = Promise.all([consume("/event"), consume("/global/event")])
-  return {
-    events,
-    stop: async () => {
-      controller.abort()
-      await Promise.race([tasks, new Promise((resolve) => setTimeout(resolve, 500))])
-    },
-  }
-}
-
-function looksHypaEvidence(value) {
-  return looksRewritten(value) || value.includes("[hypa Rewritten]") || /\bhypa git\b/.test(value)
-}
-
-function hypaEvidence(blobs) {
-  const strings = blobs.flatMap((blob) => collectStrings(blob))
-  return [...new Set(strings.filter(looksHypaEvidence))].slice(0, 8)
-}
-
 function preview(text, max = 400) {
   const value = text || ""
   return value.length <= max ? value : `${value.slice(0, max)}…`
@@ -246,90 +183,40 @@ const health = await api("GET", "/global/health")
 report.opencode = health.json ?? { status: health.status, text: health.text }
 if (!health.ok) fail("opencode serve is not healthy", { health })
 
-const eventLog = await startEventLog()
-
 const agentsRes = await api("GET", "/agent")
 const agent = pickAgent(agentsRes.json)
 report.agent = agent?.name ?? "build"
 const agentName = report.agent
 
-const toolsRes = await api("GET", "/experimental/tool/ids")
-report.experimentalToolIDs = {
-  status: toolsRes.status,
-  ids: toolsRes.json,
-}
-
-const invokeCandidates = [
-  "/experimental/tool",
-  "/experimental/tool/invoke",
-  "/experimental/tool/execute",
-  "/tool/invoke",
-  "/tool/execute",
-]
-const invokeProbe = []
-for (const path of invokeCandidates) {
-  const result = await api("POST", path, {
-    tool: "bash",
-    id: "bash",
-    name: "bash",
-    arguments: { command },
-    args: { command },
-  })
-  const html = (result.text || "").trimStart().startsWith("<!")
-  invokeProbe.push({
-    path,
-    status: result.status,
-    api: result.ok && !html && Boolean(result.json),
-    text: html ? "<html spa fallback>" : result.text.slice(0, 300),
-  })
-}
-report.experimentalToolInvoke = invokeProbe
-
 const created = await api("POST", "/session", { title: "hypa-real-shell-smoke" })
 const sessionID = sessionIdFrom(created.json)
 report.sessionID = sessionID
 if (!created.ok || !sessionID) {
-  await eventLog.stop()
   fail("POST /session failed", { created })
 }
 
-const shellBodies = [
-  { agent: agentName, command },
-  { agent: agentName, command, model: { providerID: "dummy", modelID: "dummy" } },
-  { agent: agentName, command, model: "dummy/dummy" },
-]
-
-let shellHit = null
-for (const body of shellBodies) {
-  const before = readDispatch().length
-  const result = await api("POST", `/session/${sessionID}/shell`, body, timeoutMs)
-  const afterEntries = await waitForDispatch((entries) => entries.length > before, 3_000)
-  const newEntries = afterEntries.slice(before)
-  const messages = await api("GET", `/session/${sessionID}/message`)
-  const bashParts = bashToolParts(messages.json)
-  shellHit = {
-    body,
-    status: result.status,
-    ok: result.ok,
-    error: result.error,
-    responsePreview: preview(result.text),
-    dispatchDuring: newEntries,
-    bashHooks: bashBeforeHooks(newEntries),
-    shellEnv: newEntries.filter((entry) => entry?.hook === "shell.env"),
-    bashPartCommands: bashParts.map((part) => part?.state?.input?.command),
-    hypaInResponse: hypaEvidence([result.json]),
-    hypaInMessages: hypaEvidence([messages.json]),
-  }
-  report.shell = shellHit
-  // First payload that the server accepted (or clearly executed) is the
-  // empirical /shell result. Retry only on 4xx that look like schema/model.
-  if (result.ok || result.status === 0 || result.status >= 500) break
-  if (result.status !== 400 && result.status !== 422) break
+const shellBody = { agent: agentName, command }
+const shellBefore = readDispatch().length
+const shellResult = await api("POST", `/session/${sessionID}/shell`, shellBody, timeoutMs)
+const shellAfterEntries = await waitForDispatch((entries) => entries.length > shellBefore, 3_000)
+const shellNewEntries = shellAfterEntries.slice(shellBefore)
+const shellMessages = await api("GET", `/session/${sessionID}/message`)
+const shellBashParts = bashToolParts(shellMessages.json)
+const shellHit = {
+  body: shellBody,
+  status: shellResult.status,
+  ok: shellResult.ok,
+  error: shellResult.error,
+  responsePreview: preview(shellResult.text),
+  dispatchDuring: shellNewEntries,
+  bashHooks: bashBeforeHooks(shellNewEntries),
+  shellEnv: shellNewEntries.filter((entry) => entry?.hook === "shell.env"),
+  bashPartCommands: shellBashParts.map((part) => part?.state?.input?.command),
 }
+report.shell = shellHit
 
-const shellRewritten = rewrittenDispatch(shellHit?.dispatchDuring ?? [])
+const shellRewritten = rewrittenDispatch(shellHit.dispatchDuring)
 if (shellRewritten) {
-  await eventLog.stop()
   report.dispatch = readDispatch()
   pass("POST /session/:id/shell invoked tool.execute.before and hypa rewrote the command", {
     rewritten: shellRewritten,
@@ -337,10 +224,9 @@ if (shellRewritten) {
 }
 
 const shellRan =
-  shellHit &&
-  (shellHit.ok ||
-    shellHit.shellEnv.length > 0 ||
-    (shellHit.status === 200 && shellHit.responsePreview.length > 0))
+  shellHit.ok ||
+  shellHit.shellEnv.length > 0 ||
+  (shellHit.status === 200 && shellHit.responsePreview.length > 0)
 
 if (shellRan && bashBeforeHooks(shellHit.dispatchDuring).length === 0) {
   console.log(
@@ -353,69 +239,44 @@ if (shellRan && bashBeforeHooks(shellHit.dispatchDuring).length === 0) {
 const dummySession = await api("POST", "/session", { title: "hypa-dummy-bash-smoke" })
 const dummySessionID = sessionIdFrom(dummySession.json)
 if (!dummySession.ok || !dummySessionID) {
-  await eventLog.stop()
   fail("POST /session for dummy-model fallback failed", { dummySession })
 }
 
-const dummyBodies = [
-  {
-    agent: agentName,
-    model: { providerID: "dummy", modelID: "dummy" },
-    parts: [{ type: "text", text: `Run this exact command: ${command}` }],
-  },
-  {
-    agent: agentName,
-    model: "dummy/dummy",
-    parts: [{ type: "text", text: `Run this exact command: ${command}` }],
-  },
-  {
-    parts: [{ type: "text", text: `Run this exact command: ${command}` }],
-  },
-]
-
-let dummyHit = null
-for (const body of dummyBodies) {
-  const before = readDispatch().length
-  const result = await api("POST", `/session/${dummySessionID}/message`, body, timeoutMs)
-  const afterEntries = await waitForDispatch((entries) => rewrittenDispatch(entries.slice(before)), 15_000)
-  const newEntries = afterEntries.slice(before)
-  const messages = await api("GET", `/session/${dummySessionID}/message`)
-  const bashParts = bashToolParts(messages.json)
-  dummyHit = {
-    sessionID: dummySessionID,
-    bodyKeys: Object.keys(body),
-    status: result.status,
-    ok: result.ok,
-    error: result.error,
-    responsePreview: preview(result.text),
-    dispatchDuring: newEntries,
-    bashHooks: bashBeforeHooks(newEntries),
-    bashPartCommands: bashParts.map((part) => part?.state?.input?.command),
-    bashPartTitles: bashParts.map((part) => part?.state?.title),
-    hypaInResponse: hypaEvidence([result.json]),
-    hypaInMessages: hypaEvidence([messages.json]),
-  }
-  report.dummyMessage = dummyHit
-  if (rewrittenDispatch(newEntries)) break
-  if (result.status !== 400 && result.status !== 422 && result.status !== 200) break
+const dummyBody = {
+  agent: agentName,
+  model: { providerID: "dummy", modelID: "dummy" },
+  parts: [{ type: "text", text: `Run this exact command: ${command}` }],
 }
 
-await eventLog.stop()
+const dummyBefore = readDispatch().length
+const dummyResult = await api("POST", `/session/${dummySessionID}/message`, dummyBody, timeoutMs)
+const dummyAfterEntries = await waitForDispatch(
+  (entries) => rewrittenDispatch(entries.slice(dummyBefore)),
+  15_000,
+)
+const dummyNewEntries = dummyAfterEntries.slice(dummyBefore)
+const dummyMessages = await api("GET", `/session/${dummySessionID}/message`)
+const dummyBashParts = bashToolParts(dummyMessages.json)
+const dummyHit = {
+  sessionID: dummySessionID,
+  status: dummyResult.status,
+  ok: dummyResult.ok,
+  error: dummyResult.error,
+  responsePreview: preview(dummyResult.text),
+  dispatchDuring: dummyNewEntries,
+  bashHooks: bashBeforeHooks(dummyNewEntries),
+  bashPartCommands: dummyBashParts.map((part) => part?.state?.input?.command),
+  bashPartTitles: dummyBashParts.map((part) => part?.state?.title),
+}
+report.dummyMessage = dummyHit
 report.dispatch = readDispatch()
 const dummyLogPath = process.env.SMOKE_DUMMY_LOG
-report.dummyLog = dummyLogPath && existsSync(dummyLogPath)
-  ? readFileSync(dummyLogPath, "utf8").trim().split("\n").slice(-8)
-  : []
-report.eventHypa = hypaEvidence(eventLog.events)
-report.eventTypes = [
-  ...new Set(
-    eventLog.events
-      .map((event) => event?.type || event?.payload?.type || event?.event)
-      .filter(Boolean),
-  ),
-]
+report.dummyLog =
+  dummyLogPath && existsSync(dummyLogPath)
+    ? readFileSync(dummyLogPath, "utf8").trim().split("\n").slice(-8)
+    : []
 
-const dummyRewritten = rewrittenDispatch(dummyHit?.dispatchDuring ?? [])
+const dummyRewritten = rewrittenDispatch(dummyHit.dispatchDuring)
 if (dummyRewritten) {
   const executed = (dummyHit.bashPartCommands ?? []).some(looksRewritten)
   if ((dummyHit.bashPartCommands ?? []).length > 0 && !executed) {
@@ -430,7 +291,7 @@ if (dummyRewritten) {
       rewritten: dummyRewritten,
       executedCommand: dummyHit.bashPartCommands?.[0] ?? dummyRewritten.commandAfter,
       shellSkippedBashHooks: Boolean(shellRan && shellHit.bashHooks.length === 0),
-      shellStatus: shellHit?.status ?? null,
+      shellStatus: shellHit.status,
     },
   )
 }
@@ -442,21 +303,10 @@ if (anyRewritten) {
   })
 }
 
-const invokeExisted = invokeProbe.some((row) => row.api)
-report.experimentalToolInvoke = invokeProbe
-
-const bits = []
-if (shellHit) {
-  bits.push(
-    `/shell status=${shellHit.status} bashHooks=${shellHit.bashHooks.length} shell.env=${shellHit.shellEnv.length}`,
-  )
-}
-if (dummyHit) {
-  bits.push(`/message(dummy) status=${dummyHit.status} bashHooks=${dummyHit.bashHooks.length}`)
-}
-if (invokeExisted) {
-  bits.push("experimental tool POST existed but did not rewrite via hypa")
-}
+const bits = [
+  `/shell status=${shellHit.status} bashHooks=${shellHit.bashHooks.length} shell.env=${shellHit.shellEnv.length}`,
+  `/message(dummy) status=${dummyHit.status} bashHooks=${dummyHit.bashHooks.length}`,
+]
 
 skip(
   "no unauthenticated OpenCode dispatcher invoked tool.execute.before on bash/shell. " +
