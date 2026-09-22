@@ -154,7 +154,7 @@ describe("resolveHypaBinary", () => {
 
   it("resolves a PATH .js candidate only after the native bundled binary misses", () => {
     const linuxJs = pathCandidate("linux", "/opt/js", "hypa.js")
-    const linux = createDeps({})
+    const linux = createDeps({ files: [linuxJs] })
     assert.equal(resolveBare("hypa.js", "linux", { PATH: "/opt/js" }, linux), linuxJs)
     assert.equal(count(linux.resolveCalls, nativePackageId("linux")), 1)
 
