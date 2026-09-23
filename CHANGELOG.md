@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Server entry no longer re-exports `HypaConfig`, `HypaConfigWithSources`, or `RewriteStatus`. `PluginOptions` stays the public options type.
 - Dead leftovers after `formatHypaDiagnostics` and the JSX-free TUI: unused `formatStatus`, `scripts/probe-tui-load.mjs`, and the duplicate `fake-hypa-rewrite.js` fixture.
 - Direct `@opentui/core`, `@opentui/keymap`, and `@opentui/solid` devDependencies. This package never imports them; they remain optional peers of `@opencode-ai/plugin`. CI `opencode-latest` now installs only `@opencode-ai/plugin@latest`.
 
