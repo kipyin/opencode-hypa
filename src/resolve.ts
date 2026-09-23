@@ -137,16 +137,6 @@ function getWindowsExecutableExtensions(env: NodeJS.ProcessEnv): string[] {
   return extensions
 }
 
-/**
- * Resolve order for bare names like `hypa`:
- * 1. Absolute/relative path → as-is
- * 2. Windows: native bundled binary
- * 3. PATH non-JS candidate
- * 4. Native bundled binary
- * 5. PATH JS candidate
- * 6. bin.js fallback
- * 7. bare name
- */
 export function resolveHypaBinary(
   binary: string,
   env: NodeJS.ProcessEnv = process.env,
@@ -156,16 +146,23 @@ export function resolveHypaBinary(
 ): string {
   if (binary.includes("/") || binary.includes("\\")) return binary
 
+  // Windows prefers the native bundle over PATH. A miss is final for this call:
+  // the same lookup after PATH cannot succeed, and moving the only native call
+  // to after PATH would let a PATH non-JS hit win on Windows.
+  let windowsNativeMissed = false
   if (platformName === "win32") {
     const nativeBinary = resolveNativeHypaBinary(exists, requireResolve, platformName)
     if (nativeBinary) return nativeBinary
+    windowsNativeMissed = true
   }
 
   const pathBinary = resolvePathBinary(binary, env, platformName, exists)
   if (pathBinary && !isJsEntry(pathBinary)) return pathBinary
 
-  const nativeBinary = resolveNativeHypaBinary(exists, requireResolve, platformName)
-  if (nativeBinary) return nativeBinary
+  if (!windowsNativeMissed) {
+    const nativeBinary = resolveNativeHypaBinary(exists, requireResolve, platformName)
+    if (nativeBinary) return nativeBinary
+  }
 
   if (pathBinary) return pathBinary
 
