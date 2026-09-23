@@ -17,10 +17,6 @@ function isJsEntry(path: string): boolean {
   return /\.js$/i.test(path)
 }
 
-/**
- * Normalise spawn args so `.js` entrypoints always run under the host runtime.
- * On Windows, wrap `.cmd`/`.bat` with `cmd /c`.
- */
 export function getExecArgs(
   binary: string,
   args: string[],

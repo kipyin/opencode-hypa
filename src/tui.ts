@@ -90,10 +90,6 @@ const tui: TuiPlugin = async (api) => {
   })
 }
 
-/**
- * TUI-only entry. OpenCode rejects modules that export both `server` and `tui`.
- * Package `exports["./tui"]` points here (compiled to `dist/tui.js`).
- */
 export default {
   id: "opencode-hypa",
   tui,

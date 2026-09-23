@@ -10,7 +10,7 @@ import {
 } from "./state.js"
 import type { PluginOptions } from "./types.js"
 
-export type { HypaConfig, HypaConfigWithSources, PluginOptions, RewriteStatus } from "./types.js"
+export type { PluginOptions }
 
 function applyRewrite(
   output: { args: { command?: unknown } },
@@ -24,15 +24,6 @@ function applyRewrite(
 }
 
 /**
- * OpenCode server plugin that rewrites bash/shell tool calls through Hypa.
- *
- * Dual-target package layout (OpenCode requires separate modules):
- *   exports["./server"] -> this file
- *   exports["./tui"]    -> ./tui.ts
- *
- * Install:
- *   opencode plugin opencode-hypa --global
- *
  * Important: do not re-export helper functions from this entry. OpenCode's legacy
  * plugin loader treats every exported function as a plugin entrypoint.
  * Do not export `tui` here — a module may export server or tui, never both.
@@ -49,10 +40,6 @@ const server = (async (_input, options?: PluginOptions) => {
     return {}
   }
 
-  // Stash rewrites keyed by callID so tool.execute.after can annotate the
-  // tool result the LLM sees. Without this, OpenCode hands the LLM the
-  // rewritten command in the tool result with no marker that a plugin
-  // changed it, and the LLM rationalizes the prefix as its own typo.
   const rewrites = new Map<string, RewriteRecord>()
 
   return {
