@@ -10,14 +10,16 @@ export type ToolAfterOutput = {
   metadata: any
 }
 
+function prependNote(existing: unknown, note: string, separator: "\n" | "\n\n"): string {
+  const text = typeof existing === "string" ? existing : ""
+  return text ? `${note}${separator}${text}` : note
+}
+
 export function annotateRewrite(output: ToolAfterOutput, record: RewriteRecord): void {
   const note = `[hypa ${record.outcome}] ${record.input} => ${record.command}`
 
-  const existingTitle = typeof output.title === "string" ? output.title : ""
-  output.title = existingTitle ? `${note}\n${existingTitle}` : note
-
-  const existingOutput = typeof output.output === "string" ? output.output : ""
-  output.output = existingOutput ? `${note}\n\n${existingOutput}` : note
+  output.title = prependNote(output.title, note, "\n")
+  output.output = prependNote(output.output, note, "\n\n")
 
   const existingMetadata =
     output.metadata && typeof output.metadata === "object" ? output.metadata : {}
