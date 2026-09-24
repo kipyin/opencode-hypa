@@ -89,12 +89,7 @@ function resolvePathBinary(
     if (!dir) continue
     const candidate = resolvePath(dir, binary)
 
-    if (!isWindows) {
-      if (exists(candidate)) return candidate
-      continue
-    }
-
-    if (hasExecutableExtension) {
+    if (!isWindows || hasExecutableExtension) {
       if (exists(candidate)) return candidate
       continue
     }
