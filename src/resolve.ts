@@ -31,6 +31,21 @@ export function getExecArgs(
   return [binary, args]
 }
 
+function resolvePackageFile(
+  packageJsonId: string,
+  exists: (p: string) => boolean,
+  requireResolve: RequireResolve,
+  ...relativeParts: string[]
+): string | undefined {
+  try {
+    const packageJson = requireResolve(packageJsonId)
+    const candidate = join(dirname(packageJson), ...relativeParts)
+    return exists(candidate) ? candidate : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function resolveNativeHypaBinary(
   exists: (p: string) => boolean = existsSync,
   requireResolve: RequireResolve = require.resolve.bind(require),
@@ -40,16 +55,14 @@ function resolveNativeHypaBinary(
   const archKey = PLATFORM_MAP[platformName]?.[archName]
   if (!archKey) return undefined
 
-  const pkgName = `@hypabolic/hypa-${archKey}`
-  try {
-    const packageJson = requireResolve(`${pkgName}/package.json`)
-    const packageRoot = dirname(packageJson)
-    const binaryName = platformName === "win32" ? "hypa.exe" : "hypa"
-    const binaryPath = join(packageRoot, "bin", binaryName)
-    return exists(binaryPath) ? binaryPath : undefined
-  } catch {
-    return undefined
-  }
+  const binaryName = platformName === "win32" ? "hypa.exe" : "hypa"
+  return resolvePackageFile(
+    `@hypabolic/hypa-${archKey}/package.json`,
+    exists,
+    requireResolve,
+    "bin",
+    binaryName,
+  )
 }
 
 function resolveBundledJsHypaBinary(
@@ -58,13 +71,7 @@ function resolveBundledJsHypaBinary(
   requireResolve: RequireResolve,
 ): string | undefined {
   if (binary !== "hypa") return undefined
-  try {
-    const packageJson = requireResolve("@hypabolic/hypa/package.json")
-    const bin = join(dirname(packageJson), "bin.js")
-    return exists(bin) ? bin : undefined
-  } catch {
-    return undefined
-  }
+  return resolvePackageFile("@hypabolic/hypa/package.json", exists, requireResolve, "bin.js")
 }
 
 function resolvePathBinary(
