@@ -10,29 +10,21 @@ export type AskNonInteractivePolicy = "allow" | "deny"
 
 export type ConfigSource = "env" | "options" | "default"
 
-export type PluginOptions = {
-  binary?: string
-  rewriteTimeoutMs?: number
-  askNonInteractive?: AskNonInteractivePolicy
-  enabled?: boolean
-}
-
-export type HypaConfigSources = {
-  binary: ConfigSource
-  rewriteTimeoutMs: ConfigSource
-  askNonInteractive: ConfigSource
-  enabled: ConfigSource
-}
-
-export type HypaConfigWithSources = HypaConfig & {
-  sources: HypaConfigSources
-}
-
 export type HypaConfig = {
   binary: string
   rewriteTimeoutMs: number
   askNonInteractive: AskNonInteractivePolicy
   enabled: boolean
+}
+
+export type PluginOptions = Partial<HypaConfig>
+
+export type HypaConfigSources = {
+  [K in keyof HypaConfig]: ConfigSource
+}
+
+export type HypaConfigWithSources = HypaConfig & {
+  sources: HypaConfigSources
 }
 
 export type RewriteStatus =
