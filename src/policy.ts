@@ -40,121 +40,112 @@ function warnInvalid(field: string, value: unknown, fallback: unknown): void {
   )
 }
 
-function resolveBinary(
-  env: NodeJS.ProcessEnv,
-  options: PluginOptions | undefined,
-): { value: string; source: ConfigSource } {
-  const envValue = env.OPENCODE_HYPA_BIN
-  if (envValue !== undefined) {
-    const trimmed = envValue.trim()
-    if (trimmed) {
-      return { value: trimmed, source: "env" }
-    }
-    warnInvalid("binary", envValue, DEFAULTS.binary)
-    return { value: DEFAULTS.binary, source: "default" }
-  }
-
-  const optionValue = options?.binary
-  if (optionValue !== undefined) {
-    if (typeof optionValue === "string" && optionValue.trim()) {
-      return { value: optionValue.trim(), source: "options" }
-    }
-    warnInvalid("binary", optionValue, DEFAULTS.binary)
-    return { value: DEFAULTS.binary, source: "default" }
-  }
-
-  return { value: DEFAULTS.binary, source: "default" }
+type Sourced<T> = {
+  value: T
+  source: ConfigSource
 }
 
-function resolveRewriteTimeoutMs(
-  env: NodeJS.ProcessEnv,
-  options: PluginOptions | undefined,
-): { value: number; source: ConfigSource } {
-  const envValue = env.OPENCODE_HYPA_REWRITE_TIMEOUT_MS
+function resolveField<T>(
+  field: string,
+  fallback: T,
+  envValue: string | undefined,
+  parseEnv: (raw: string) => T | undefined,
+  optionValue: unknown,
+  parseOption: (raw: unknown) => T | undefined,
+): Sourced<T> {
   if (envValue !== undefined) {
-    const parsed = Number(envValue)
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return { value: parsed, source: "env" }
-    }
-    warnInvalid("rewriteTimeoutMs", envValue, DEFAULTS.rewriteTimeoutMs)
-    return { value: DEFAULTS.rewriteTimeoutMs, source: "default" }
+    const parsed = parseEnv(envValue)
+    if (parsed !== undefined) return { value: parsed, source: "env" }
+    warnInvalid(field, envValue, fallback)
+    return { value: fallback, source: "default" }
   }
 
-  const optionValue = options?.rewriteTimeoutMs
   if (optionValue !== undefined) {
-    if (Number.isInteger(optionValue) && optionValue > 0) {
-      return { value: optionValue, source: "options" }
-    }
-    warnInvalid("rewriteTimeoutMs", optionValue, DEFAULTS.rewriteTimeoutMs)
-    return { value: DEFAULTS.rewriteTimeoutMs, source: "default" }
+    const parsed = parseOption(optionValue)
+    if (parsed !== undefined) return { value: parsed, source: "options" }
+    warnInvalid(field, optionValue, fallback)
+    return { value: fallback, source: "default" }
   }
 
-  return { value: DEFAULTS.rewriteTimeoutMs, source: "default" }
+  return { value: fallback, source: "default" }
 }
 
-function resolveAskNonInteractive(
-  env: NodeJS.ProcessEnv,
-  options: PluginOptions | undefined,
-): { value: AskNonInteractivePolicy; source: ConfigSource } {
-  const envValue = env.OPENCODE_HYPA_ASK_NON_INTERACTIVE
-  if (envValue !== undefined) {
-    const normalized = envValue.trim().toLowerCase()
-    if (normalized === "allow" || normalized === "deny") {
-      return { value: normalized, source: "env" }
-    }
-    warnInvalid("askNonInteractive", envValue, DEFAULTS.askNonInteractive)
-    return { value: DEFAULTS.askNonInteractive, source: "default" }
-  }
-
-  const optionValue = options?.askNonInteractive
-  if (optionValue !== undefined) {
-    if (optionValue === "allow" || optionValue === "deny") {
-      return { value: optionValue, source: "options" }
-    }
-    warnInvalid("askNonInteractive", optionValue, DEFAULTS.askNonInteractive)
-    return { value: DEFAULTS.askNonInteractive, source: "default" }
-  }
-
-  return { value: DEFAULTS.askNonInteractive, source: "default" }
+function parseBinary(raw: string): string | undefined {
+  const trimmed = raw.trim()
+  return trimmed ? trimmed : undefined
 }
 
-function resolveEnabled(
-  env: NodeJS.ProcessEnv,
-  options: PluginOptions | undefined,
-): { value: boolean; source: ConfigSource } {
-  const envValue = env.OPENCODE_HYPA_ENABLED
-  if (envValue !== undefined) {
-    const normalized = envValue.trim().toLowerCase()
-    if (["0", "false", "no", "off"].includes(normalized)) {
-      return { value: false, source: "env" }
-    }
-    if (["1", "true", "yes", "on"].includes(normalized)) {
-      return { value: true, source: "env" }
-    }
-    warnInvalid("enabled", envValue, DEFAULTS.enabled)
-    return { value: DEFAULTS.enabled, source: "default" }
-  }
+function parseBinaryOption(raw: unknown): string | undefined {
+  return typeof raw === "string" ? parseBinary(raw) : undefined
+}
 
-  const optionValue = options?.enabled
-  if (optionValue !== undefined) {
-    if (typeof optionValue === "boolean") {
-      return { value: optionValue, source: "options" }
-    }
-    warnInvalid("enabled", optionValue, DEFAULTS.enabled)
-    return { value: DEFAULTS.enabled, source: "default" }
-  }
+function parsePositiveInt(raw: string): number | undefined {
+  const parsed = Number(raw)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+}
 
-  return { value: DEFAULTS.enabled, source: "default" }
+function parsePositiveIntOption(raw: unknown): number | undefined {
+  return typeof raw === "number" && Number.isInteger(raw) && raw > 0 ? raw : undefined
+}
+
+function parseAsk(raw: string): AskNonInteractivePolicy | undefined {
+  const normalized = raw.trim().toLowerCase()
+  if (normalized === "allow" || normalized === "deny") return normalized
+  return undefined
+}
+
+function parseAskOption(raw: unknown): AskNonInteractivePolicy | undefined {
+  if (raw === "allow" || raw === "deny") return raw
+  return undefined
+}
+
+function parseEnabled(raw: string): boolean | undefined {
+  const normalized = raw.trim().toLowerCase()
+  if (["0", "false", "no", "off"].includes(normalized)) return false
+  if (["1", "true", "yes", "on"].includes(normalized)) return true
+  return undefined
+}
+
+function parseEnabledOption(raw: unknown): boolean | undefined {
+  return typeof raw === "boolean" ? raw : undefined
 }
 
 export function loadConfig(
   env: NodeJS.ProcessEnv = process.env,
   options?: PluginOptions,
 ): HypaConfigWithSources {
-  const binary = resolveBinary(env, options)
-  const rewriteTimeoutMs = resolveRewriteTimeoutMs(env, options)
-  const askNonInteractive = resolveAskNonInteractive(env, options)
-  const enabled = resolveEnabled(env, options)
+  const binary = resolveField(
+    "binary",
+    DEFAULTS.binary,
+    env.OPENCODE_HYPA_BIN,
+    parseBinary,
+    options?.binary,
+    parseBinaryOption,
+  )
+  const rewriteTimeoutMs = resolveField(
+    "rewriteTimeoutMs",
+    DEFAULTS.rewriteTimeoutMs,
+    env.OPENCODE_HYPA_REWRITE_TIMEOUT_MS,
+    parsePositiveInt,
+    options?.rewriteTimeoutMs,
+    parsePositiveIntOption,
+  )
+  const askNonInteractive = resolveField(
+    "askNonInteractive",
+    DEFAULTS.askNonInteractive,
+    env.OPENCODE_HYPA_ASK_NON_INTERACTIVE,
+    parseAsk,
+    options?.askNonInteractive,
+    parseAskOption,
+  )
+  const enabled = resolveField(
+    "enabled",
+    DEFAULTS.enabled,
+    env.OPENCODE_HYPA_ENABLED,
+    parseEnabled,
+    options?.enabled,
+    parseEnabledOption,
+  )
 
   return {
     binary: binary.value,
