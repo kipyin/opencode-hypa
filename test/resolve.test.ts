@@ -207,6 +207,38 @@ describe("resolveHypaBinary", () => {
     assert.equal(count(deps.resolveCalls, JS_PACKAGE_ID), 0)
   })
 
+  it("on Windows, returns a PATH hit that already has an executable extension", () => {
+    const pathCmd = pathCandidate("win32", String.raw`C:\Tools`, "hypa.cmd")
+    const deps = createDeps({ files: [pathCmd] })
+
+    assert.equal(
+      resolveBare(
+        "hypa.cmd",
+        "win32",
+        { PATH: String.raw`C:\Tools`, PATHEXT: ".COM;.EXE;.BAT;.CMD" },
+        deps,
+      ),
+      pathCmd,
+    )
+    assert.deepEqual(deps.existsCalls, [pathCmd])
+  })
+
+  it("on Windows, does not append PATHEXT when the name already has an extension", () => {
+    const pathCmd = pathCandidate("win32", String.raw`C:\Tools`, "hypa.cmd")
+    const deps = createDeps({ files: [`${pathCmd}.EXE`] })
+
+    assert.equal(
+      resolveBare(
+        "hypa.cmd",
+        "win32",
+        { PATH: String.raw`C:\Tools`, PATHEXT: ".COM;.EXE;.BAT;.CMD" },
+        deps,
+      ),
+      "hypa.cmd",
+    )
+    assert.deepEqual(deps.existsCalls, [pathCmd])
+  })
+
   it("does not resolve the native binary again after a Windows native miss", () => {
     const nativeId = nativePackageId("win32")
     const deps = createDeps({})
