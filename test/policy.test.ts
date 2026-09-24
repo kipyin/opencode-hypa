@@ -139,6 +139,43 @@ describe("loadConfig", () => {
     assert.equal(config.sources.enabled, "env")
   })
 
+  it("does not fall through to options when env is set but invalid", () => {
+    const warn = mock.fn()
+    const originalWarn = console.warn
+    console.warn = warn
+
+    try {
+      const config = loadConfig(
+        {
+          OPENCODE_HYPA_BIN: " ",
+          OPENCODE_HYPA_REWRITE_TIMEOUT_MS: "0",
+          OPENCODE_HYPA_ASK_NON_INTERACTIVE: "maybe",
+          OPENCODE_HYPA_ENABLED: "sometimes",
+        },
+        {
+          binary: "/options/hypa",
+          rewriteTimeoutMs: 9000,
+          askNonInteractive: "allow",
+          enabled: false,
+        },
+      )
+
+      assert.equal(config.binary, "hypa")
+      assert.equal(config.rewriteTimeoutMs, 5000)
+      assert.equal(config.askNonInteractive, "deny")
+      assert.equal(config.enabled, true)
+      assert.deepEqual(config.sources, {
+        binary: "default",
+        rewriteTimeoutMs: "default",
+        askNonInteractive: "default",
+        enabled: "default",
+      })
+      assert.equal(warn.mock.calls.length, 4)
+    } finally {
+      console.warn = originalWarn
+    }
+  })
+
   it("warns and falls back to defaults for invalid env values", () => {
     const warn = mock.fn()
     const originalWarn = console.warn
