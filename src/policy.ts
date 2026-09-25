@@ -1,20 +1,15 @@
-import type {
-  AskNonInteractivePolicy,
-  ConfigSource,
-  HypaConfigWithSources,
-  PluginOptions,
-  RewriteOutcome,
-  RewriteResultV1,
-  RewriteStatus,
+import {
+  REWRITE_OUTCOMES,
+  type AskNonInteractivePolicy,
+  type ConfigSource,
+  type HypaConfigWithSources,
+  type PluginOptions,
+  type RewriteOutcome,
+  type RewriteResultV1,
+  type RewriteStatus,
 } from "./types.js"
 
-const VALID_OUTCOMES = new Set<RewriteOutcome>([
-  "Rewritten",
-  "GenericWrapper",
-  "Passthrough",
-  "Deny",
-  "Ask",
-])
+const VALID_OUTCOMES = new Set<RewriteOutcome>(REWRITE_OUTCOMES)
 
 const BASH_TOOLS = new Set(["bash", "shell"])
 
