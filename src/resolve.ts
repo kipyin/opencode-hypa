@@ -23,8 +23,8 @@ export function getExecArgs(
   platformName: string = platform(),
   jsRuntime: string = process.execPath,
 ): [string, string[]] {
+  if (isJsEntry(binary)) return [jsRuntime, [binary, ...args]]
   const lower = binary.toLowerCase()
-  if (lower.endsWith(".js")) return [jsRuntime, [binary, ...args]]
   if (platformName === "win32" && (lower.endsWith(".cmd") || lower.endsWith(".bat"))) {
     return ["cmd", ["/c", binary, ...args]]
   }
