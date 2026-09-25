@@ -1,4 +1,5 @@
 import {
+  ASK_NON_INTERACTIVE_POLICIES,
   REWRITE_OUTCOMES,
   type AskNonInteractivePolicy,
   type ConfigSource,
@@ -10,6 +11,7 @@ import {
 } from "./types.js"
 
 const VALID_OUTCOMES = new Set<RewriteOutcome>(REWRITE_OUTCOMES)
+const VALID_ASK_POLICIES = new Set<AskNonInteractivePolicy>(ASK_NON_INTERACTIVE_POLICIES)
 
 const BASH_TOOLS = new Set(["bash", "shell"])
 
@@ -83,15 +85,17 @@ function parsePositiveIntOption(raw: unknown): number | undefined {
   return typeof raw === "number" && Number.isInteger(raw) && raw > 0 ? raw : undefined
 }
 
+function isAskPolicy(value: string): value is AskNonInteractivePolicy {
+  return VALID_ASK_POLICIES.has(value as AskNonInteractivePolicy)
+}
+
 function parseAsk(raw: string): AskNonInteractivePolicy | undefined {
   const normalized = raw.trim().toLowerCase()
-  if (normalized === "allow" || normalized === "deny") return normalized
-  return undefined
+  return isAskPolicy(normalized) ? normalized : undefined
 }
 
 function parseAskOption(raw: unknown): AskNonInteractivePolicy | undefined {
-  if (raw === "allow" || raw === "deny") return raw
-  return undefined
+  return typeof raw === "string" && isAskPolicy(raw) ? raw : undefined
 }
 
 function parseEnabled(raw: string): boolean | undefined {
