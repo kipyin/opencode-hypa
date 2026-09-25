@@ -76,13 +76,17 @@ function parseBinaryOption(raw: unknown): string | undefined {
   return typeof raw === "string" ? parseBinary(raw) : undefined
 }
 
+function isPositiveInt(value: number): boolean {
+  return Number.isInteger(value) && value > 0
+}
+
 function parsePositiveInt(raw: string): number | undefined {
   const parsed = Number(raw)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+  return isPositiveInt(parsed) ? parsed : undefined
 }
 
 function parsePositiveIntOption(raw: unknown): number | undefined {
-  return typeof raw === "number" && Number.isInteger(raw) && raw > 0 ? raw : undefined
+  return typeof raw === "number" && isPositiveInt(raw) ? raw : undefined
 }
 
 function isAskPolicy(value: string): value is AskNonInteractivePolicy {
