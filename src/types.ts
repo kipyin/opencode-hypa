@@ -14,7 +14,9 @@ export type RewriteResultV1 = {
   command: string
 }
 
-export type AskNonInteractivePolicy = "allow" | "deny"
+export const ASK_NON_INTERACTIVE_POLICIES = ["allow", "deny"] as const
+
+export type AskNonInteractivePolicy = (typeof ASK_NON_INTERACTIVE_POLICIES)[number]
 
 export type ConfigSource = "env" | "options" | "default"
 
