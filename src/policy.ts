@@ -98,11 +98,19 @@ function parseAskOption(raw: unknown): AskNonInteractivePolicy | undefined {
   return typeof raw === "string" && isAskPolicy(raw) ? raw : undefined
 }
 
+const ENABLED_FLAGS = new Map<string, boolean>([
+  ["0", false],
+  ["false", false],
+  ["no", false],
+  ["off", false],
+  ["1", true],
+  ["true", true],
+  ["yes", true],
+  ["on", true],
+])
+
 function parseEnabled(raw: string): boolean | undefined {
-  const normalized = raw.trim().toLowerCase()
-  if (["0", "false", "no", "off"].includes(normalized)) return false
-  if (["1", "true", "yes", "on"].includes(normalized)) return true
-  return undefined
+  return ENABLED_FLAGS.get(raw.trim().toLowerCase())
 }
 
 function parseEnabledOption(raw: unknown): boolean | undefined {
