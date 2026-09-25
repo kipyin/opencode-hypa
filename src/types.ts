@@ -1,4 +1,12 @@
-export type RewriteOutcome = "Rewritten" | "GenericWrapper" | "Passthrough" | "Deny" | "Ask"
+export const REWRITE_OUTCOMES = [
+  "Rewritten",
+  "GenericWrapper",
+  "Passthrough",
+  "Deny",
+  "Ask",
+] as const
+
+export type RewriteOutcome = (typeof REWRITE_OUTCOMES)[number]
 
 export type RewriteResultV1 = {
   input: string
