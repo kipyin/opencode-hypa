@@ -186,6 +186,10 @@ export function parseRewriteJson(stdout: string): RewriteResultV1 {
   return payload as RewriteResultV1
 }
 
+function rewriteCommandFields(result: RewriteResultV1): Pick<RewriteResultV1, "input" | "command"> {
+  return { input: result.input, command: result.command }
+}
+
 export function mapRewriteResult(result: RewriteResultV1): RewriteStatus {
   switch (result.outcome) {
     case "Rewritten":
@@ -193,29 +197,29 @@ export function mapRewriteResult(result: RewriteResultV1): RewriteStatus {
       return {
         kind: "rewritten",
         outcome: result.outcome,
-        input: result.input,
-        command: result.command,
+        ...rewriteCommandFields(result),
       }
     case "Passthrough":
       return {
         kind: "passthrough",
         outcome: result.outcome,
-        input: result.input,
-        command: result.command,
+        ...rewriteCommandFields(result),
       }
     case "Deny":
       return {
         kind: "deny",
-        input: result.input,
-        command: result.command,
+        ...rewriteCommandFields(result),
         reason: `Command blocked by Hypa policy: ${result.input}`,
       }
     case "Ask":
       return {
         kind: "ask",
-        input: result.input,
-        command: result.command,
+        ...rewriteCommandFields(result),
         reason: `Hypa requests confirmation before running: ${result.command || result.input}`,
       }
+    default: {
+      const _exhaustive: never = result.outcome
+      return _exhaustive
+    }
   }
 }
