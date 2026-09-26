@@ -239,6 +239,16 @@ describe("resolveHypaBinary", () => {
     assert.deepEqual(deps.existsCalls, [pathCmd])
   })
 
+  it("does not query a native package for an unsupported platform", () => {
+    const deps = createDeps({})
+
+    assert.equal(resolveBare("hypa", "freebsd", { PATH: "/usr/bin" }, deps), "hypa")
+    assert.equal(
+      deps.resolveCalls.some((id) => id.startsWith("@hypabolic/hypa-")),
+      false,
+    )
+  })
+
   it("does not resolve the native binary again after a Windows native miss", () => {
     const nativeId = nativePackageId("win32")
     const deps = createDeps({})
