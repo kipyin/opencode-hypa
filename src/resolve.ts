@@ -5,10 +5,14 @@ import { platform } from "node:os"
 
 const require = createRequire(import.meta.url)
 
-const PLATFORM_MAP: Record<string, Record<string, string>> = {
-  linux: { x64: "linux-x64", arm64: "linux-arm64" },
-  darwin: { x64: "darwin-x64", arm64: "darwin-arm64" },
-  win32: { x64: "win32-x64", arm64: "win32-arm64" },
+const NATIVE_PLATFORMS = ["linux", "darwin", "win32"] as const
+const NATIVE_ARCHES = ["x64", "arm64"] as const
+
+function nativePackageArchKey(platformName: string, archName: string): string | undefined {
+  const platform = NATIVE_PLATFORMS.find((item) => item === platformName)
+  const arch = NATIVE_ARCHES.find((item) => item === archName)
+  if (platform === undefined || arch === undefined) return undefined
+  return `${platform}-${arch}`
 }
 
 type RequireResolve = (id: string) => string
@@ -52,7 +56,7 @@ function resolveNativeHypaBinary(
   platformName: string = platform(),
   archName: string = process.arch,
 ): string | undefined {
-  const archKey = PLATFORM_MAP[platformName]?.[archName]
+  const archKey = nativePackageArchKey(platformName, archName)
   if (!archKey) return undefined
 
   const binaryName = platformName === "win32" ? "hypa.exe" : "hypa"
