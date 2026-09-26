@@ -1,16 +1,9 @@
 import type { HypaStateSnapshot } from "./state.js"
-import type { ConfigSource, HypaConfigWithSources } from "./types.js"
+import { HYPA_CONFIG_FIELDS, type ConfigSource } from "./types.js"
 
 export type HypaDiagnosticsInput = HypaStateSnapshot & {
   binaryExists: boolean
 }
-
-const CONFIG_FIELDS = [
-  "binary",
-  "rewriteTimeoutMs",
-  "askNonInteractive",
-  "enabled",
-] as const satisfies ReadonlyArray<keyof HypaConfigWithSources>
 
 function formatConfigSource(source: ConfigSource): string {
   return `(${source})`
@@ -47,7 +40,7 @@ export function formatHypaDiagnostics(input: HypaDiagnosticsInput): string {
     lines.push("config: (unknown)")
   } else {
     lines.push("config:")
-    for (const field of CONFIG_FIELDS) {
+    for (const field of HYPA_CONFIG_FIELDS) {
       lines.push(
         `  ${field}: ${formatConfigValue(config[field])} ${formatConfigSource(config.sources[field])}`,
       )

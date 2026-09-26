@@ -27,6 +27,16 @@ export type HypaConfig = {
   enabled: boolean
 }
 
+export const HYPA_CONFIG_FIELDS = [
+  "binary",
+  "rewriteTimeoutMs",
+  "askNonInteractive",
+  "enabled",
+] as const satisfies readonly (keyof HypaConfig)[]
+
+type MissingHypaConfigField = Exclude<keyof HypaConfig, (typeof HYPA_CONFIG_FIELDS)[number]>
+const _allHypaConfigFieldsListed: MissingHypaConfigField extends never ? true : never = true
+
 export type PluginOptions = Partial<HypaConfig>
 
 export type HypaConfigSources = {
