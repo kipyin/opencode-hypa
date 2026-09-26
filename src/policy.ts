@@ -1,8 +1,11 @@
 import {
   ASK_NON_INTERACTIVE_POLICIES,
+  HYPA_CONFIG_FIELDS,
   REWRITE_OUTCOMES,
   type AskNonInteractivePolicy,
   type ConfigSource,
+  type HypaConfig,
+  type HypaConfigSources,
   type HypaConfigWithSources,
   type PluginOptions,
   type RewriteOutcome,
@@ -67,6 +70,27 @@ function resolveField<T>(
   return { value: fallback, source: "default" }
 }
 
+function assignResolvedField<K extends keyof HypaConfig>(
+  config: HypaConfig,
+  sources: HypaConfigSources,
+  field: K,
+  sourced: Sourced<HypaConfig[K]>,
+): void {
+  config[field] = sourced.value
+  sources[field] = sourced.source
+}
+
+function configWithSources(
+  resolved: { [K in keyof HypaConfig]: Sourced<HypaConfig[K]> },
+): HypaConfigWithSources {
+  const config = {} as HypaConfig
+  const sources = {} as HypaConfigSources
+  for (const field of HYPA_CONFIG_FIELDS) {
+    assignResolvedField(config, sources, field, resolved[field])
+  }
+  return { ...config, sources }
+}
+
 function parseBinary(raw: string): string | undefined {
   const trimmed = raw.trim()
   return trimmed ? trimmed : undefined
@@ -125,51 +149,40 @@ export function loadConfig(
   env: NodeJS.ProcessEnv = process.env,
   options?: PluginOptions,
 ): HypaConfigWithSources {
-  const binary = resolveField(
-    "binary",
-    DEFAULTS.binary,
-    env.OPENCODE_HYPA_BIN,
-    parseBinary,
-    options?.binary,
-    parseBinaryOption,
-  )
-  const rewriteTimeoutMs = resolveField(
-    "rewriteTimeoutMs",
-    DEFAULTS.rewriteTimeoutMs,
-    env.OPENCODE_HYPA_REWRITE_TIMEOUT_MS,
-    parsePositiveInt,
-    options?.rewriteTimeoutMs,
-    parsePositiveIntOption,
-  )
-  const askNonInteractive = resolveField(
-    "askNonInteractive",
-    DEFAULTS.askNonInteractive,
-    env.OPENCODE_HYPA_ASK_NON_INTERACTIVE,
-    parseAsk,
-    options?.askNonInteractive,
-    parseAskOption,
-  )
-  const enabled = resolveField(
-    "enabled",
-    DEFAULTS.enabled,
-    env.OPENCODE_HYPA_ENABLED,
-    parseEnabled,
-    options?.enabled,
-    parseEnabledOption,
-  )
-
-  return {
-    binary: binary.value,
-    rewriteTimeoutMs: rewriteTimeoutMs.value,
-    askNonInteractive: askNonInteractive.value,
-    enabled: enabled.value,
-    sources: {
-      binary: binary.source,
-      rewriteTimeoutMs: rewriteTimeoutMs.source,
-      askNonInteractive: askNonInteractive.source,
-      enabled: enabled.source,
-    },
-  }
+  return configWithSources({
+    binary: resolveField(
+      "binary",
+      DEFAULTS.binary,
+      env.OPENCODE_HYPA_BIN,
+      parseBinary,
+      options?.binary,
+      parseBinaryOption,
+    ),
+    rewriteTimeoutMs: resolveField(
+      "rewriteTimeoutMs",
+      DEFAULTS.rewriteTimeoutMs,
+      env.OPENCODE_HYPA_REWRITE_TIMEOUT_MS,
+      parsePositiveInt,
+      options?.rewriteTimeoutMs,
+      parsePositiveIntOption,
+    ),
+    askNonInteractive: resolveField(
+      "askNonInteractive",
+      DEFAULTS.askNonInteractive,
+      env.OPENCODE_HYPA_ASK_NON_INTERACTIVE,
+      parseAsk,
+      options?.askNonInteractive,
+      parseAskOption,
+    ),
+    enabled: resolveField(
+      "enabled",
+      DEFAULTS.enabled,
+      env.OPENCODE_HYPA_ENABLED,
+      parseEnabled,
+      options?.enabled,
+      parseEnabledOption,
+    ),
+  })
 }
 
 export function parseRewriteJson(stdout: string): RewriteResultV1 {
