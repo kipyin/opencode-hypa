@@ -10,6 +10,10 @@ function abortErrorMessage(signal?: AbortSignal): string {
   return "rewrite aborted"
 }
 
+function rewriteError(input: string, error: string): RewriteStatus {
+  return { kind: "error", input, error }
+}
+
 async function runRewrite(
   binary: string,
   command: string,
@@ -90,7 +94,7 @@ export async function rewriteCommand(
   }
 
   if (signal?.aborted) {
-    return { kind: "error", input: command, error: abortErrorMessage(signal) }
+    return rewriteError(command, abortErrorMessage(signal))
   }
 
   const binary = resolveHypaBinary(config.binary)
@@ -99,29 +103,21 @@ export async function rewriteCommand(
     const result = await runRewrite(binary, command, config.rewriteTimeoutMs, signal)
 
     if (result.aborted) {
-      return { kind: "error", input: command, error: abortErrorMessage(signal) }
+      return rewriteError(command, abortErrorMessage(signal))
     }
 
     if (result.timedOut) {
-      return {
-        kind: "error",
-        input: command,
-        error: `hypa rewrite timed out after ${config.rewriteTimeoutMs}ms`,
-      }
+      return rewriteError(command, `hypa rewrite timed out after ${config.rewriteTimeoutMs}ms`)
     }
 
     if (!result.stdout.trim()) {
       const detail = result.stderr.trim() || `exit code ${result.code}`
-      return {
-        kind: "error",
-        input: command,
-        error: `hypa rewrite produced no JSON (${detail})`,
-      }
+      return rewriteError(command, `hypa rewrite produced no JSON (${detail})`)
     }
 
     return mapRewriteResult(parseRewriteJson(result.stdout))
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    return { kind: "error", input: command, error: message }
+    return rewriteError(command, message)
   }
 }
