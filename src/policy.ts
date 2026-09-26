@@ -185,16 +185,38 @@ export function loadConfig(
   })
 }
 
+const REWRITE_RESULT_FIELDS = ["input", "outcome", "command"] as const satisfies readonly (keyof RewriteResultV1)[]
+
+type MissingRewriteResultField = Exclude<keyof RewriteResultV1, (typeof REWRITE_RESULT_FIELDS)[number]>
+const _allRewriteResultFieldsListed: MissingRewriteResultField extends never ? true : never = true
+
+function assertRewriteResultField(
+  payload: Partial<RewriteResultV1>,
+  field: (typeof REWRITE_RESULT_FIELDS)[number],
+): void {
+  switch (field) {
+    case "input":
+    case "command":
+      if (typeof payload[field] !== "string") {
+        throw new Error(`rewrite result missing string field: ${field}`)
+      }
+      return
+    case "outcome":
+      if (typeof payload.outcome !== "string" || !VALID_OUTCOMES.has(payload.outcome as RewriteOutcome)) {
+        throw new Error(`rewrite result has unknown outcome: ${String(payload.outcome)}`)
+      }
+      return
+    default: {
+      const _exhaustive: never = field
+      return _exhaustive
+    }
+  }
+}
+
 export function parseRewriteJson(stdout: string): RewriteResultV1 {
   const payload = JSON.parse(stdout.trim()) as Partial<RewriteResultV1>
-  if (typeof payload.input !== "string") {
-    throw new Error("rewrite result missing string field: input")
-  }
-  if (typeof payload.outcome !== "string" || !VALID_OUTCOMES.has(payload.outcome as RewriteOutcome)) {
-    throw new Error(`rewrite result has unknown outcome: ${String(payload.outcome)}`)
-  }
-  if (typeof payload.command !== "string") {
-    throw new Error("rewrite result missing string field: command")
+  for (const field of REWRITE_RESULT_FIELDS) {
+    assertRewriteResultField(payload, field)
   }
   return payload as RewriteResultV1
 }
