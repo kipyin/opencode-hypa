@@ -55,6 +55,15 @@ describe("formatHypaDiagnostics", () => {
     assert.ok(configIdx > versionIdx)
     assert.ok(rewriteIdx > configIdx)
 
+    const binaryLine = text.indexOf("  binary:", configIdx)
+    const timeoutLine = text.indexOf("  rewriteTimeoutMs:", configIdx)
+    const askLine = text.indexOf("  askNonInteractive:", configIdx)
+    const enabledLine = text.indexOf("  enabled:", configIdx)
+    assert.ok(binaryLine > configIdx)
+    assert.ok(timeoutLine > binaryLine)
+    assert.ok(askLine > timeoutLine)
+    assert.ok(enabledLine > askLine)
+
     assert.match(text, /^enabled: false$/m)
     assert.match(text, /^  path: \/opt\/hypa$/m)
     assert.match(text, /^  exists: true$/m)
