@@ -1,5 +1,15 @@
-import type { HypaStateSnapshot } from "./state.js"
+import type { HypaStateSnapshot, LastRewrite } from "./state.js"
 import { HYPA_CONFIG_FIELDS, type ConfigSource } from "./types.js"
+
+const LAST_REWRITE_FIELDS = [
+  "input",
+  "command",
+  "outcome",
+  "timestamp",
+] as const satisfies readonly (keyof LastRewrite)[]
+
+type MissingLastRewriteField = Exclude<keyof LastRewrite, (typeof LAST_REWRITE_FIELDS)[number]>
+const _allLastRewriteFieldsListed: MissingLastRewriteField extends never ? true : never = true
 
 export type HypaDiagnosticsInput = HypaStateSnapshot & {
   binaryExists: boolean
@@ -15,6 +25,24 @@ function formatConfigValue(value: string | number | boolean): string {
 
 function formatTimestamp(timestamp: number): string {
   return new Date(timestamp).toISOString()
+}
+
+function formatLastRewriteField(
+  record: LastRewrite,
+  field: (typeof LAST_REWRITE_FIELDS)[number],
+): string {
+  switch (field) {
+    case "input":
+    case "command":
+    case "outcome":
+      return record[field]
+    case "timestamp":
+      return formatTimestamp(record.timestamp)
+    default: {
+      const _exhaustive: never = field
+      return _exhaustive
+    }
+  }
 }
 
 export function formatHypaDiagnostics(input: HypaDiagnosticsInput): string {
@@ -52,10 +80,9 @@ export function formatHypaDiagnostics(input: HypaDiagnosticsInput): string {
     lines.push("last rewrite: none")
   } else {
     lines.push("last rewrite:")
-    lines.push(`  input: ${input.lastRewrite.input}`)
-    lines.push(`  command: ${input.lastRewrite.command}`)
-    lines.push(`  outcome: ${input.lastRewrite.outcome}`)
-    lines.push(`  timestamp: ${formatTimestamp(input.lastRewrite.timestamp)}`)
+    for (const field of LAST_REWRITE_FIELDS) {
+      lines.push(`  ${field}: ${formatLastRewriteField(input.lastRewrite, field)}`)
+    }
   }
 
   return lines.join("\n")
