@@ -65,10 +65,19 @@ describe("parseRewriteJson / mapRewriteResult", () => {
   })
 
   it("rejects invalid payloads", () => {
-    assert.throws(() => parseRewriteJson("{}"))
-    assert.throws(() =>
-      parseRewriteJson(JSON.stringify({ input: "x", outcome: "Nope", command: "x" })),
+    assert.throws(() => parseRewriteJson("{}"), {
+      message: "rewrite result missing string field: input",
+    })
+    assert.throws(() => parseRewriteJson(JSON.stringify({ outcome: "Nope", command: "x" })), {
+      message: "rewrite result missing string field: input",
+    })
+    assert.throws(
+      () => parseRewriteJson(JSON.stringify({ input: "x", outcome: "Nope", command: "x" })),
+      { message: "rewrite result has unknown outcome: Nope" },
     )
+    assert.throws(() => parseRewriteJson(JSON.stringify({ input: "x", outcome: "Rewritten" })), {
+      message: "rewrite result missing string field: command",
+    })
   })
 })
 
