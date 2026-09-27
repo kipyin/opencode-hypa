@@ -8,6 +8,14 @@ export const REWRITE_OUTCOMES = [
 
 export type RewriteOutcome = (typeof REWRITE_OUTCOMES)[number]
 
+export const REWRITTEN_OUTCOMES = ["Rewritten", "GenericWrapper"] as const satisfies readonly RewriteOutcome[]
+
+export type RewrittenOutcome = (typeof REWRITTEN_OUTCOMES)[number]
+
+export const ANNOTATED_REWRITE_OUTCOMES = [...REWRITTEN_OUTCOMES, "Ask"] as const satisfies readonly RewriteOutcome[]
+
+export type AnnotatedRewriteOutcome = (typeof ANNOTATED_REWRITE_OUTCOMES)[number]
+
 export type RewriteResultV1 = {
   input: string
   outcome: RewriteOutcome
@@ -48,7 +56,7 @@ export type HypaConfigWithSources = HypaConfig & {
 }
 
 export type RewriteStatus =
-  | { kind: "rewritten"; outcome: "Rewritten" | "GenericWrapper"; input: string; command: string }
+  | { kind: "rewritten"; outcome: RewrittenOutcome; input: string; command: string }
   | { kind: "passthrough"; outcome: "Passthrough"; input: string; command: string }
   | { kind: "deny"; input: string; command: string; reason: string }
   | { kind: "ask"; input: string; command: string; reason: string }
