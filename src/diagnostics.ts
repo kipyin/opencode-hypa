@@ -1,12 +1,7 @@
-import type { HypaStateSnapshot, LastRewrite } from "./state.js"
+import { REWRITE_TRACE_FIELDS, type HypaStateSnapshot, type LastRewrite } from "./state.js"
 import { HYPA_CONFIG_FIELDS, type ConfigSource } from "./types.js"
 
-const LAST_REWRITE_FIELDS = [
-  "input",
-  "command",
-  "outcome",
-  "timestamp",
-] as const satisfies readonly (keyof LastRewrite)[]
+const LAST_REWRITE_FIELDS = [...REWRITE_TRACE_FIELDS, "timestamp"] as const satisfies readonly (keyof LastRewrite)[]
 
 type MissingLastRewriteField = Exclude<keyof LastRewrite, (typeof LAST_REWRITE_FIELDS)[number]>
 const _allLastRewriteFieldsListed: MissingLastRewriteField extends never ? true : never = true

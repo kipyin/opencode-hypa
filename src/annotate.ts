@@ -1,3 +1,4 @@
+import { pickRewriteTraceFields, REWRITE_TRACE_FIELDS } from "./state.js"
 import type { AnnotatedRewriteOutcome } from "./types.js"
 
 export type RewriteRecord = {
@@ -5,6 +6,9 @@ export type RewriteRecord = {
   command: string
   outcome: AnnotatedRewriteOutcome
 }
+
+type MissingRewriteRecordField = Exclude<keyof RewriteRecord, (typeof REWRITE_TRACE_FIELDS)[number]>
+const _allRewriteRecordFieldsListed: MissingRewriteRecordField extends never ? true : never = true
 
 export type ToolAfterOutput = {
   title: string
@@ -27,10 +31,6 @@ export function annotateRewrite(output: ToolAfterOutput, record: RewriteRecord):
     output.metadata && typeof output.metadata === "object" ? output.metadata : {}
   output.metadata = {
     ...existingMetadata,
-    hypaRewrite: {
-      input: record.input,
-      command: record.command,
-      outcome: record.outcome,
-    },
+    hypaRewrite: pickRewriteTraceFields(record),
   }
 }
