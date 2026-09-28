@@ -1,7 +1,9 @@
+import type { AnnotatedRewriteOutcome } from "./types.js"
+
 export type RewriteRecord = {
   input: string
   command: string
-  outcome: "Rewritten" | "GenericWrapper" | "Ask"
+  outcome: AnnotatedRewriteOutcome
 }
 
 export type ToolAfterOutput = {
