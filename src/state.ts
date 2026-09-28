@@ -7,6 +7,31 @@ export type LastRewrite = {
   timestamp: number
 }
 
+export const REWRITE_TRACE_FIELDS = ["input", "command", "outcome"] as const satisfies readonly (keyof Omit<
+  LastRewrite,
+  "timestamp"
+>)[]
+
+type MissingRewriteTraceField = Exclude<
+  keyof Omit<LastRewrite, "timestamp">,
+  (typeof REWRITE_TRACE_FIELDS)[number]
+>
+const _allRewriteTraceFieldsListed: MissingRewriteTraceField extends never ? true : never = true
+
+export type LastRewriteInput = Omit<LastRewrite, "timestamp"> & {
+  timestamp?: number
+}
+
+export function pickRewriteTraceFields<T extends Record<(typeof REWRITE_TRACE_FIELDS)[number], unknown>>(
+  record: T,
+): Pick<T, (typeof REWRITE_TRACE_FIELDS)[number]> {
+  const picked = {} as Pick<T, (typeof REWRITE_TRACE_FIELDS)[number]>
+  for (const field of REWRITE_TRACE_FIELDS) {
+    picked[field] = record[field]
+  }
+  return picked
+}
+
 export type HypaStateSnapshot = {
   resolvedBinary: string | undefined
   effectiveConfigWithSources: HypaConfigWithSources | undefined
@@ -43,18 +68,11 @@ export function setHypaEffectiveConfigWithSources(
   state = { ...state, effectiveConfigWithSources }
 }
 
-export function setHypaLastRewrite(record: {
-  input: string
-  command: string
-  outcome: RewriteOutcome
-  timestamp?: number
-}): void {
+export function setHypaLastRewrite(record: LastRewriteInput): void {
   state = {
     ...state,
     lastRewrite: {
-      input: record.input,
-      command: record.command,
-      outcome: record.outcome,
+      ...pickRewriteTraceFields(record),
       timestamp: record.timestamp ?? Date.now(),
     },
   }
