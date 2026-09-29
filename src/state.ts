@@ -18,6 +18,17 @@ type MissingRewriteTraceField = Exclude<
 >
 const _allRewriteTraceFieldsListed: MissingRewriteTraceField extends never ? true : never = true
 
+export const REWRITE_COMMAND_FIELDS = ["input", "command"] as const satisfies readonly Exclude<
+  (typeof REWRITE_TRACE_FIELDS)[number],
+  "outcome"
+>[]
+
+type MissingRewriteCommandField = Exclude<
+  Exclude<(typeof REWRITE_TRACE_FIELDS)[number], "outcome">,
+  (typeof REWRITE_COMMAND_FIELDS)[number]
+>
+const _allRewriteCommandFieldsListed: MissingRewriteCommandField extends never ? true : never = true
+
 export type LastRewriteInput = Omit<LastRewrite, "timestamp"> & {
   timestamp?: number
 }
@@ -27,6 +38,16 @@ export function pickRewriteTraceFields<T extends Record<(typeof REWRITE_TRACE_FI
 ): Pick<T, (typeof REWRITE_TRACE_FIELDS)[number]> {
   const picked = {} as Pick<T, (typeof REWRITE_TRACE_FIELDS)[number]>
   for (const field of REWRITE_TRACE_FIELDS) {
+    picked[field] = record[field]
+  }
+  return picked
+}
+
+export function pickRewriteCommandFields<
+  T extends Record<(typeof REWRITE_COMMAND_FIELDS)[number], unknown>,
+>(record: T): Pick<T, (typeof REWRITE_COMMAND_FIELDS)[number]> {
+  const picked = {} as Pick<T, (typeof REWRITE_COMMAND_FIELDS)[number]>
+  for (const field of REWRITE_COMMAND_FIELDS) {
     picked[field] = record[field]
   }
   return picked

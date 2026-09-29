@@ -1,3 +1,4 @@
+import { pickRewriteCommandFields } from "./state.js"
 import {
   ASK_NON_INTERACTIVE_POLICIES,
   HYPA_CONFIG_FIELDS,
@@ -221,35 +222,33 @@ export function parseRewriteJson(stdout: string): RewriteResultV1 {
   return payload as RewriteResultV1
 }
 
-function rewriteCommandFields(result: RewriteResultV1): Pick<RewriteResultV1, "input" | "command"> {
-  return { input: result.input, command: result.command }
-}
-
 export function mapRewriteResult(result: RewriteResultV1): RewriteStatus {
+  const commandFields = pickRewriteCommandFields(result)
+
   switch (result.outcome) {
     case "Rewritten":
     case "GenericWrapper":
       return {
         kind: "rewritten",
         outcome: result.outcome,
-        ...rewriteCommandFields(result),
+        ...commandFields,
       }
     case "Passthrough":
       return {
         kind: "passthrough",
         outcome: result.outcome,
-        ...rewriteCommandFields(result),
+        ...commandFields,
       }
     case "Deny":
       return {
         kind: "deny",
-        ...rewriteCommandFields(result),
+        ...commandFields,
         reason: `Command blocked by Hypa policy: ${result.input}`,
       }
     case "Ask":
       return {
         kind: "ask",
-        ...rewriteCommandFields(result),
+        ...commandFields,
         reason: `Hypa requests confirmation before running: ${result.command || result.input}`,
       }
     default: {
