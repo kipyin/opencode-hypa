@@ -33,24 +33,27 @@ export type LastRewriteInput = Omit<LastRewrite, "timestamp"> & {
   timestamp?: number
 }
 
-export function pickRewriteTraceFields<T extends Record<(typeof REWRITE_TRACE_FIELDS)[number], unknown>>(
-  record: T,
-): Pick<T, (typeof REWRITE_TRACE_FIELDS)[number]> {
-  const picked = {} as Pick<T, (typeof REWRITE_TRACE_FIELDS)[number]>
-  for (const field of REWRITE_TRACE_FIELDS) {
+function pickRecordFields<
+  T extends Record<string, unknown>,
+  F extends readonly (keyof T & string)[],
+>(record: T, fields: F): Pick<T, F[number]> {
+  const picked = {} as Pick<T, F[number]>
+  for (const field of fields) {
     picked[field] = record[field]
   }
   return picked
 }
 
+export function pickRewriteTraceFields<T extends Record<(typeof REWRITE_TRACE_FIELDS)[number], unknown>>(
+  record: T,
+): Pick<T, (typeof REWRITE_TRACE_FIELDS)[number]> {
+  return pickRecordFields(record, REWRITE_TRACE_FIELDS)
+}
+
 export function pickRewriteCommandFields<
   T extends Record<(typeof REWRITE_COMMAND_FIELDS)[number], unknown>,
 >(record: T): Pick<T, (typeof REWRITE_COMMAND_FIELDS)[number]> {
-  const picked = {} as Pick<T, (typeof REWRITE_COMMAND_FIELDS)[number]>
-  for (const field of REWRITE_COMMAND_FIELDS) {
-    picked[field] = record[field]
-  }
-  return picked
+  return pickRecordFields(record, REWRITE_COMMAND_FIELDS)
 }
 
 export type HypaStateSnapshot = {
