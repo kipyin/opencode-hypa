@@ -1,4 +1,4 @@
-import { pickRewriteCommandFields } from "./state.js"
+import { pickRewriteCommandFields, REWRITE_TRACE_FIELDS } from "./state.js"
 import {
   ASK_NON_INTERACTIVE_POLICIES,
   HYPA_CONFIG_FIELDS,
@@ -186,14 +186,12 @@ export function loadConfig(
   })
 }
 
-const REWRITE_RESULT_FIELDS = ["input", "outcome", "command"] as const satisfies readonly (keyof RewriteResultV1)[]
-
-type MissingRewriteResultField = Exclude<keyof RewriteResultV1, (typeof REWRITE_RESULT_FIELDS)[number]>
+type MissingRewriteResultField = Exclude<keyof RewriteResultV1, (typeof REWRITE_TRACE_FIELDS)[number]>
 const _allRewriteResultFieldsListed: MissingRewriteResultField extends never ? true : never = true
 
 function assertRewriteResultField(
   payload: Partial<RewriteResultV1>,
-  field: (typeof REWRITE_RESULT_FIELDS)[number],
+  field: (typeof REWRITE_TRACE_FIELDS)[number],
 ): void {
   switch (field) {
     case "input":
@@ -216,7 +214,7 @@ function assertRewriteResultField(
 
 export function parseRewriteJson(stdout: string): RewriteResultV1 {
   const payload = JSON.parse(stdout.trim()) as Partial<RewriteResultV1>
-  for (const field of REWRITE_RESULT_FIELDS) {
+  for (const field of REWRITE_TRACE_FIELDS) {
     assertRewriteResultField(payload, field)
   }
   return payload as RewriteResultV1
