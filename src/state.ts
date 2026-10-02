@@ -12,11 +12,16 @@ export const REWRITE_TRACE_FIELDS = ["input", "command", "outcome"] as const sat
   "timestamp"
 >)[]
 
+export const LAST_REWRITE_FIELDS = [...REWRITE_TRACE_FIELDS, "timestamp"] as const satisfies readonly (keyof LastRewrite)[]
+
 type MissingRewriteTraceField = Exclude<
   keyof Omit<LastRewrite, "timestamp">,
   (typeof REWRITE_TRACE_FIELDS)[number]
 >
 const _allRewriteTraceFieldsListed: MissingRewriteTraceField extends never ? true : never = true
+
+type MissingLastRewriteField = Exclude<keyof LastRewrite, (typeof LAST_REWRITE_FIELDS)[number]>
+const _allLastRewriteFieldsListed: MissingLastRewriteField extends never ? true : never = true
 
 export const REWRITE_COMMAND_FIELDS = ["input", "command"] as const satisfies readonly Exclude<
   (typeof REWRITE_TRACE_FIELDS)[number],
