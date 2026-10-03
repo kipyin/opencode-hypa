@@ -2,7 +2,7 @@ import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { formatHypaDiagnostics, type HypaDiagnosticsInput } from "./diagnostics.js"
-import { getExecArgs } from "./resolve.js"
+import { CAPTURE_SPAWN_STDIO, getExecArgs } from "./resolve.js"
 import { getHypaState, setHypaVersion } from "./state.js"
 
 let hypaVersionCached = false
@@ -11,7 +11,7 @@ function spawnHypaVersion(binary: string): Promise<string> {
   const [execBin, execArgs] = getExecArgs(binary, ["--version"])
 
   return new Promise((resolve, reject) => {
-    const child = spawn(execBin, execArgs, { stdio: ["ignore", "pipe", "pipe"] })
+    const child = spawn(execBin, execArgs, { stdio: CAPTURE_SPAWN_STDIO })
     let stdout = ""
 
     child.stdout?.on("data", (chunk) => {

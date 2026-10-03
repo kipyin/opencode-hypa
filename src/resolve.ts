@@ -21,6 +21,8 @@ function isJsEntry(path: string): boolean {
   return /\.js$/i.test(path)
 }
 
+export const CAPTURE_SPAWN_STDIO: ["ignore", "pipe", "pipe"] = ["ignore", "pipe", "pipe"]
+
 export function getExecArgs(
   binary: string,
   args: string[],
