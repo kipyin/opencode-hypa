@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process"
 import type { HypaConfig, RewriteStatus } from "./types.js"
 import { isHypaCommand, mapRewriteResult, parseRewriteJson } from "./policy.js"
-import { getExecArgs, resolveHypaBinary } from "./resolve.js"
+import { CAPTURE_SPAWN_STDIO, getExecArgs, resolveHypaBinary } from "./resolve.js"
 
 function abortErrorMessage(signal?: AbortSignal): string {
   const reason = signal?.reason
@@ -28,7 +28,7 @@ async function runRewrite(
 
   return await new Promise((resolve, reject) => {
     const child = spawn(execBin, execArgs, {
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: CAPTURE_SPAWN_STDIO,
     })
 
     let stdout = ""
