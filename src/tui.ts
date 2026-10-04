@@ -4,6 +4,7 @@ import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { formatHypaDiagnostics, type HypaDiagnosticsInput } from "./diagnostics.js"
 import { CAPTURE_SPAWN_STDIO, getExecArgs } from "./resolve.js"
 import { getHypaState, setHypaVersion } from "./state.js"
+import { PLUGIN_ID } from "./types.js"
 
 let hypaVersionCached = false
 
@@ -76,7 +77,7 @@ const tui: TuiPlugin = async (api) => {
   api.keymap.registerLayer({
     commands: [
       {
-        name: "opencode-hypa.diagnostics",
+        name: `${PLUGIN_ID}.diagnostics`,
         title: "Hypa diagnostics",
         category: "Hypa",
         namespace: "palette",
@@ -91,6 +92,6 @@ const tui: TuiPlugin = async (api) => {
 }
 
 export default {
-  id: "opencode-hypa",
+  id: PLUGIN_ID,
   tui,
 }

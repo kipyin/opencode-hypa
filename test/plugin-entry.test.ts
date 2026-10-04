@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url"
 import { describe, it } from "node:test"
 import plugin from "../src/index.js"
 import tuiPlugin from "../src/tui.js"
+import { PLUGIN_ID } from "../src/types.js"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -19,7 +20,7 @@ function getServerPlugin(value: unknown): ((...args: any[]) => unknown) | undefi
 describe("plugin entry exports", () => {
   it("uses the OpenCode v1 server-only PluginModule shape", () => {
     assert.equal(typeof plugin, "object")
-    assert.equal(plugin.id, "opencode-hypa")
+    assert.equal(plugin.id, PLUGIN_ID)
     assert.equal(typeof plugin.server, "function")
     assert.equal(
       "tui" in plugin,
@@ -30,7 +31,7 @@ describe("plugin entry exports", () => {
 
   it("uses the OpenCode v1 tui-only module shape", () => {
     assert.equal(typeof tuiPlugin, "object")
-    assert.equal(tuiPlugin.id, "opencode-hypa")
+    assert.equal(tuiPlugin.id, PLUGIN_ID)
     assert.equal(typeof tuiPlugin.tui, "function")
     assert.equal(
       "server" in tuiPlugin,

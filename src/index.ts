@@ -8,7 +8,7 @@ import {
   setHypaLastRewrite,
   setHypaResolvedBinary,
 } from "./state.js"
-import type { PluginOptions } from "./types.js"
+import { PLUGIN_ID, type PluginOptions } from "./types.js"
 
 export type { PluginOptions }
 
@@ -105,7 +105,7 @@ const server = (async (_input, options?: PluginOptions) => {
 }) satisfies Plugin
 
 const plugin = {
-  id: "opencode-hypa",
+  id: PLUGIN_ID,
   server,
 } satisfies PluginModule
 
