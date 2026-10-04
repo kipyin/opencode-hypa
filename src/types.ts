@@ -1,3 +1,5 @@
+export const PLUGIN_ID = "opencode-hypa" as const
+
 export const REWRITE_OUTCOMES = [
   "Rewritten",
   "GenericWrapper",
