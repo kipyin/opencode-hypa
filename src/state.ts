@@ -1,9 +1,6 @@
-import type { HypaConfigWithSources, RewriteOutcome } from "./types.js"
+import type { HypaConfigWithSources, RewriteResultV1 } from "./types.js"
 
-export type LastRewrite = {
-  input: string
-  command: string
-  outcome: RewriteOutcome
+export type LastRewrite = RewriteResultV1 & {
   timestamp: number
 }
 
@@ -34,7 +31,7 @@ type MissingRewriteCommandField = Exclude<
 >
 const _allRewriteCommandFieldsListed: MissingRewriteCommandField extends never ? true : never = true
 
-export type LastRewriteInput = Omit<LastRewrite, "timestamp"> & {
+export type LastRewriteInput = RewriteResultV1 & {
   timestamp?: number
 }
 
