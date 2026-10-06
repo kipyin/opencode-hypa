@@ -1,9 +1,7 @@
 import { pickRewriteTraceFields, REWRITE_TRACE_FIELDS } from "./state.js"
-import type { AnnotatedRewriteOutcome } from "./types.js"
+import type { AnnotatedRewriteOutcome, RewriteResultV1 } from "./types.js"
 
-export type RewriteRecord = {
-  input: string
-  command: string
+export type RewriteRecord = Omit<RewriteResultV1, "outcome"> & {
   outcome: AnnotatedRewriteOutcome
 }
 
