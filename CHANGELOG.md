@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The latest-OpenCode canary now fails, instead of warning, when OpenCode stops sending real bash calls through the plugin hooks.
+
 ## [1.0.4] - 2026-09-25
 
 ### Fixed

@@ -122,8 +122,12 @@ jobs:
 
       # Packs the plugin, starts `opencode serve`, asserts the v1 loader, then
       # drives POST /session/:id/shell (and a dummy-model bash fallback).
+      # SMOKE_REQUIRE_REAL_SHELL=1: if OpenCode never dispatches bash through
+      # tool.execute.before, the real-shell smoke exits 1 and this step fails
+      # (local runs without the flag still warn and continue on exit 2).
       - name: Smoke OpenCode plugin loader
         if: steps.cli.outputs.ok == 'true'
         env:
           SMOKE_REQUIRE_CLI: "1"
+          SMOKE_REQUIRE_REAL_SHELL: "1"
         run: bash scripts/smoke-opencode-loader.sh
