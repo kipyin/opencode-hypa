@@ -114,7 +114,7 @@ npm test
 npm run build
 ```
 
-CI keeps a fast lockfile job on Node 18 and 22. A separate `opencode-latest` job (push/PR and weekly) installs [`@opencode-ai/plugin@latest`](https://www.npmjs.com/package/@opencode-ai/plugin) from npm — the same version OpenCode publishes for the CLI (`opencode-ai` / GitHub Releases) — and re-runs typecheck, tests, the rewrite/hook smoke, and a real OpenCode bash-dispatch smoke (`POST /session/:id/shell`, with a dummy-model fallback because `/shell` does not invoke `tool.execute.before`).
+CI keeps a fast lockfile job on Node 18 and 22. A separate `opencode-latest` job (push/PR and weekly) installs [`@opencode-ai/plugin@latest`](https://www.npmjs.com/package/@opencode-ai/plugin) from npm — the same version OpenCode publishes for the CLI (`opencode-ai` / GitHub Releases) — and re-runs typecheck, tests, the rewrite/hook smoke, and a real OpenCode bash-dispatch smoke (`POST /session/:id/shell`, with a dummy-model fallback because `/shell` does not invoke `tool.execute.before`). That canary sets `SMOKE_REQUIRE_REAL_SHELL=1`, so it fails when OpenCode stops sending real bash calls through the plugin hooks.
 
 ## Publishing
 
